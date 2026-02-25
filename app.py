@@ -191,6 +191,30 @@ SYSTEM_PROMPT = """你是一位頂尖的美食評論數據分析師，擅長從�
   - is_ongoing：布林值，目前是否仍在進行
   - description：50-150 字說明這段期間發生了什麼，活動是否已結束
 
+### F. 適合場景推薦 (scene_recommendations)
+根據評論內容和餐廳特性，判斷此餐廳最適合哪些用餐場景。
+必須包含以下 6 種場景，每個都給出 suitable（布林值）和 description（20-40字說明）：
+- 約會、家庭聚餐、朋友聚會、商務宴客、一個人用餐、觀光打卡
+
+### G. 最佳造訪時段建議 (best_visit_time)
+從評論中萃取時間相關資訊，分析不同時段的人潮狀況：
+- summary：50-100字整體建議
+- recommendations：4個時段（平日中午、平日晚餐、假日午餐、假日晚餐），每個包含：
+  - time：時段名稱
+  - crowding：人潮程度（低/中/高）
+  - wait_time：預估等候時間
+  - description：20-40字建議
+
+### H. 評分趨勢分析 (rating_trend)
+根據評論的日期和評分，分析此餐廳的評價變化趨勢：
+- trend：improving / declining / stable
+- trend_label：中文標籤（持續進步 / 逐漸下滑 / 穩定維持）
+- summary：50-100字趨勢描述
+- periods：將評論分成 4 個時間區間（近1個月、1-3個月前、3-6個月前、6個月以上），每個包含：
+  - period：區間名稱
+  - avg_score：該區間平均星等（1-5，保留一位小數）
+  - review_count：該區間評論數
+
 ## 輸出格式（必須是合法 JSON，不可包含任何 JSON 以外文字）
 
 {
@@ -254,6 +278,34 @@ SYSTEM_PROMPT = """你是一位頂尖的美食評論數據分析師，擅長從�
       "is_ongoing": false,
       "description": "該餐廳在2024年3-6月期間透過打卡送飲品活動大量收集五星評論，此活動已結束，近期評論品質已恢復正常。"
     }
+  },
+  "scene_recommendations": [
+    {"scene": "約會", "suitable": true, "description": "環境浪漫燈光柔和，適合情侶用餐"},
+    {"scene": "家庭聚餐", "suitable": true, "description": "菜色多元，適合各年齡層"},
+    {"scene": "朋友聚會", "suitable": true, "description": "氣氛熱鬧，適合多人聚餐"},
+    {"scene": "商務宴客", "suitable": false, "description": "環境較吵雜，不適合商務洽談"},
+    {"scene": "一個人用餐", "suitable": true, "description": "有吧台座位，一人用餐不尷尬"},
+    {"scene": "觀光打卡", "suitable": true, "description": "裝潢有特色，適合拍照打卡"}
+  ],
+  "best_visit_time": {
+    "summary": "建議平日中午前往最佳，假日需提前訂位或現場候位30分鐘以上",
+    "recommendations": [
+      {"time": "平日中午", "crowding": "低", "wait_time": "無需等候", "description": "人潮最少，適合悠閒用餐"},
+      {"time": "平日晚餐", "crowding": "中", "wait_time": "約10-15分鐘", "description": "建議提早到場"},
+      {"time": "假日午餐", "crowding": "高", "wait_time": "約30-60分鐘", "description": "建議11點前到場"},
+      {"time": "假日晚餐", "crowding": "高", "wait_time": "約30-60分鐘", "description": "尖峰時段建議訂位"}
+    ]
+  },
+  "rating_trend": {
+    "trend": "stable",
+    "trend_label": "穩定維持",
+    "summary": "近半年評價穩定維持在4星以上，品質一致獲得好評",
+    "periods": [
+      {"period": "近1個月", "avg_score": 4.2, "review_count": 15},
+      {"period": "1-3個月前", "avg_score": 4.0, "review_count": 25},
+      {"period": "3-6個月前", "avg_score": 3.8, "review_count": 20},
+      {"period": "6個月以上", "avg_score": 3.5, "review_count": 30}
+    ]
   }
 }"""
 
