@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#ffffff">
 
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.json?v=20260225">
+    <link rel="manifest" href="/manifest.json?v=20260226">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
 
     <!-- Google Fonts -->
@@ -16,7 +16,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/css/style.css?v=20260225">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260226">
+
+    <!-- Critical inline styles as fallback while CSS loads -->
+    <style>
+        .hidden { display: none !important; }
+        body { font-family: 'Noto Sans TC', sans-serif; margin: 0; padding: 0; }
+    </style>
 </head>
 <body>
 
@@ -291,6 +297,12 @@
 
 </main>
 
+<!-- Photo Lightbox -->
+<div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
+    <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
+    <img class="lightbox-img" id="lightboxImg" alt="食物照片" src="">
+</div>
+
 <!-- Footer -->
 <footer class="footer">
     <div class="container">
@@ -308,6 +320,6 @@ if ("serviceWorker" in navigator) {
     }).catch(function () {});
 }
 </script>
-<script src="/static/js/app.js?v=20260225"></script>
+<script src="/static/js/app.js?v=20260226"></script>
 </body>
 </html>

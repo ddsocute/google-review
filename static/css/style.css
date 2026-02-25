@@ -1014,6 +1014,49 @@ body {
     box-shadow: var(--shadow-hover);
 }
 
+/* ---------- Photo Lightbox ---------- */
+.lightbox-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 20px;
+}
+
+.lightbox-overlay.active {
+    display: flex;
+}
+
+.lightbox-img {
+    max-width: 95vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    color: #fff;
+    font-size: 2rem;
+    cursor: pointer;
+    z-index: 10000;
+    background: rgba(0,0,0,0.5);
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
 /* ---------- Footer ---------- */
 .footer {
     text-align: center;
@@ -1075,8 +1118,18 @@ body {
         align-items: stretch;
     }
 
+    .dish-photo {
+        width: 100%;
+        height: 180px;
+    }
+
+    .photo-gallery {
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        gap: 8px;
+    }
+
     .gallery-photo {
-        height: 140px;
+        height: 130px;
     }
 
     .fake-stats {
@@ -1099,6 +1152,18 @@ body {
     .restaurant-name {
         font-size: 1.3rem;
     }
+
+    .tab-content {
+        padding: 18px 14px;
+    }
+
+    .intro-card {
+        padding: 18px 14px;
+    }
+
+    .timeline-row {
+        gap: 10px;
+    }
 }
 
 @media (max-width: 420px) {
@@ -1107,7 +1172,11 @@ body {
     }
 
     .hero-title {
-        font-size: 1.2rem;
+        font-size: 1.15rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.85rem;
     }
 
     .metrics-grid,
@@ -1121,7 +1190,42 @@ body {
         min-width: unset;
     }
 
+    .metric-score {
+        font-size: 1.3rem;
+    }
+
+    .photo-gallery {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+    }
+
     .gallery-photo {
-        height: 120px;
+        height: 110px;
+    }
+
+    .section-title {
+        font-size: 1rem;
+    }
+
+    .tab {
+        padding: 7px 10px;
+        font-size: 0.78rem;
+    }
+
+    .dim-label {
+        min-width: 60px;
+        font-size: 0.82rem;
+    }
+
+    .dim-value {
+        font-size: 0.95rem;
+    }
+
+    .fake-stats {
+        gap: 12px;
+    }
+
+    .fake-stat-value {
+        font-size: 1.1rem;
     }
 }

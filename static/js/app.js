@@ -355,9 +355,28 @@
             img.alt = "食物照片";
             img.loading = "lazy";
             img.onerror = function () { img.style.display = "none"; };
+            img.onclick = function () { openLightbox(url); };
             gallery.appendChild(img);
         });
     }
+
+    // ---------------------------------------------------------------------------
+    // Lightbox
+    // ---------------------------------------------------------------------------
+    window.openLightbox = function (url) {
+        var overlay = document.getElementById("lightboxOverlay");
+        var img = document.getElementById("lightboxImg");
+        img.src = url;
+        overlay.classList.add("active");
+        document.body.style.overflow = "hidden";
+    };
+
+    window.closeLightbox = function () {
+        var overlay = document.getElementById("lightboxOverlay");
+        overlay.classList.remove("active");
+        document.getElementById("lightboxImg").src = "";
+        document.body.style.overflow = "";
+    };
 
     // ---------------------------------------------------------------------------
     // Tabs
