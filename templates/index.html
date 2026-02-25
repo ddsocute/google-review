@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps 擗輒閰? AI ????/title>
-    <meta name="description" content="鞎澆 Google Maps 擗輒???, AI ?芸???閰?, ?刻?銝?桐???>
+    <title>Google Maps 餐廳評論 AI 分析器</title>
+    <meta name="description" content="貼入 Google Maps 餐廳連結, AI 自動分析評論, 推薦菜色一目了然">
     <meta name="theme-color" content="#ffffff">
 
     <!-- PWA -->
     <link rel="manifest" href="/manifest.json?v=20260228">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>?儭?/text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -26,48 +26,47 @@
 </head>
 <body>
 
+<!-- Dark Mode Toggle -->
+<button id="darkModeToggle" class="dark-mode-toggle" title="切換深色模式">🌙</button>
+
 <!-- ====== HERO / INPUT ====== -->
 <header class="hero">
     <div class="hero-bg"></div>
     <div class="container">
-        <!-- Dark Mode Toggle -->
-        <button class="dark-mode-toggle" id="darkModeToggle" title="??瘛梯璅∪?">??</button>
-
         <h1 class="hero-title">
-            <span class="icon-plate">?儭?/span>
-            Google Maps 擗輒閰?<br><span class="highlight">AI ????/span>
+            <span class="icon-plate">🍽️</span>
+            Google Maps 餐廳評論<br><span class="highlight">AI 分析器</span>
         </h1>
-        <p class="hero-subtitle">鞎潔? Google Maps 擗輒???, AI 撟思?瘛勗漲?????隢?/p>
+        <p class="hero-subtitle">貼上 Google Maps 餐廳連結, AI 幫你深度分析所有評論</p>
+
+        <!-- Search History -->
+        <div id="historySection" class="history-section" style="display:none;">
+            <div id="historyTags" class="history-tags"></div>
+        </div>
 
         <div class="input-group">
             <input
                 type="url"
                 id="urlInput"
                 class="url-input"
-                placeholder="鞎潔? Google Maps 擗輒???..."
+                placeholder="貼上 Google Maps 餐廳連結..."
                 autocomplete="off"
             >
             <button id="analyzeBtn" class="btn-analyze" type="button">
-                <span class="btn-text">????</span>
+                <span class="btn-text">開始分析</span>
                 <span class="btn-loader" aria-hidden="true"></span>
             </button>
         </div>
         <div class="model-toggle">
             <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
-                ??敹恍芋撘?
+                ⚡ 快速模式
             </button>
             <button class="model-btn" data-model="gemini-3-pro-preview" id="modelPro">
-                ?? 摰璅∪?
+                🧠 完整模式
             </button>
         </div>
-        <p class="input-hint">?舀?澆?: google.com/maps/place/... ??maps.app.goo.gl/... ?剝??</p>
-        <button id="demoBtn" class="btn-demo" type="button">?? 閰西岫蝭?嚗?瘜啗?靽∠儔摨?/button>
-
-        <!-- Search History -->
-        <div class="history-section" id="historySection" style="display:none;">
-            <p class="history-label">?? ?餈???/p>
-            <div class="history-tags" id="historyTags"></div>
-        </div>
+        <p class="input-hint">支援格式: google.com/maps/place/... 或 maps.app.goo.gl/... 短連結</p>
+        <button id="demoBtn" class="btn-demo" type="button">📍 試試範例：鼎泰豐信義店</button>
     </div>
 </header>
 
@@ -79,14 +78,14 @@
                 <div class="loading-progress-bar">
                     <div class="loading-progress-fill" id="loadingProgressFill"></div>
                 </div>
-                <p class="loading-progress-text" id="loadingProgressText">皞?銝?..</p>
+                <p class="loading-progress-text" id="loadingProgressText">準備中...</p>
                 <div class="step" id="step1">
                     <div class="step-icon">
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title" id="step1Title">甇???閰?...</p>
-                        <p class="step-desc" id="step1Desc">?? Google Maps ??擗輒閰?鞈?</p>
+                        <p class="step-title" id="step1Title">正在抓取評論...</p>
+                        <p class="step-desc" id="step1Desc">連接 Google Maps 取得餐廳評論資料</p>
                     </div>
                 </div>
                 <div class="step" id="step2">
@@ -94,8 +93,8 @@
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title" id="step2Title">AI 瘛勗漲??銝?..</p>
-                        <p class="step-desc" id="step2Desc">雿輻 Gemini AI ?脰?憭雁摨西?隢???/p>
+                        <p class="step-title" id="step2Title">AI 深度分析中...</p>
+                        <p class="step-desc" id="step2Desc">使用 Gemini AI 進行多維度評論分析</p>
                     </div>
                 </div>
                 <div class="step" id="step3">
@@ -103,8 +102,8 @@
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title" id="step3Title">?Ｙ????勗?...</p>
-                        <p class="step-desc" id="step3Desc">?渡?蝯?銝行?????/p>
+                        <p class="step-title" id="step3Title">產生分析報告...</p>
+                        <p class="step-desc" id="step3Desc">整理結果並收集菜品照片</p>
                     </div>
                 </div>
             </div>
@@ -147,12 +146,12 @@
 <section id="errorSection" class="hidden">
     <div class="container">
         <div class="error-card">
-            <span class="error-icon">?</span>
-            <h2 id="errorTitle">??憭望?</h2>
-            <p id="errorMessage">?潛??芰?航炊, 隢?敺?閰?</p>
+            <span class="error-icon">😥</span>
+            <h2 id="errorTitle">分析失敗</h2>
+            <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
             <div class="error-actions">
-                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">?? ???</button>
-                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">??餈??頛詨</button>
+                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">🔄 重新分析</button>
+                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">↩ 返回重新輸入</button>
             </div>
         </div>
     </div>
@@ -164,8 +163,8 @@
     <!-- SECTION 1: Restaurant Intro -->
     <section class="section-intro">
         <div class="container">
-            <h2 class="restaurant-name" id="restaurantName">擗輒?迂</h2>
-            <p class="review-count" id="reviewCount">撌脣???0 ??隢?/p>
+            <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
+            <p class="review-count" id="reviewCount">已分析 0 則評論</p>
 
             <!-- Radar Chart -->
             <div class="radar-card" id="radarCard">
@@ -173,7 +172,7 @@
             </div>
 
             <div class="intro-card">
-                <h3 class="intro-title">?? 擗輒摰隞晶</h3>
+                <h3 class="intro-title">📖 餐廳完整介紹</h3>
                 <p class="intro-text" id="restaurantIntro"></p>
             </div>
         </div>
@@ -182,30 +181,30 @@
     <!-- SECTION 2: Dimensions -->
     <section class="section-overview-dims">
         <div class="container">
-            <h2 class="section-title">?? ??閰?</h2>
+            <h2 class="section-title">📊 各項評分</h2>
 
             <!-- Top: 4 metric cards -->
             <div class="overview-grid">
                 <div class="metrics-grid metrics-grid-full">
                     <div class="metric-card" data-color="coral">
-                        <div class="metric-icon">??</div>
+                        <div class="metric-icon">🍜</div>
                         <div class="metric-score" id="tasteScore">0</div>
-                        <div class="metric-label">??</div>
+                        <div class="metric-label">口味</div>
                     </div>
                     <div class="metric-card" data-color="gold">
-                        <div class="metric-icon">??</div>
+                        <div class="metric-icon">🙋</div>
                         <div class="metric-score" id="serviceScore">0</div>
-                        <div class="metric-label">??</div>
+                        <div class="metric-label">服務</div>
                     </div>
                     <div class="metric-card" data-color="mint">
-                        <div class="metric-icon">??</div>
+                        <div class="metric-icon">🏠</div>
                         <div class="metric-score" id="envScore">0</div>
-                        <div class="metric-label">?啣?</div>
+                        <div class="metric-label">環境</div>
                     </div>
                     <div class="metric-card" data-color="violet">
-                        <div class="metric-icon">?</div>
+                        <div class="metric-icon">💰</div>
                         <div class="metric-score" id="cpScore">0</div>
-                        <div class="metric-label">CP??/div>
+                        <div class="metric-label">CP值</div>
                     </div>
                 </div>
             </div>
@@ -213,15 +212,15 @@
             <!-- Bottom: dimension detail tabs -->
             <div class="dims-detail">
                 <div class="tabs">
-                    <button class="tab active" data-tab="taste">?? ??</button>
-                    <button class="tab" data-tab="service">?? ??</button>
-                    <button class="tab" data-tab="environment">?? ?啣?</button>
-                    <button class="tab" data-tab="value">? CP??/button>
+                    <button class="tab active" data-tab="taste">🍜 口味</button>
+                    <button class="tab" data-tab="service">🙋 服務</button>
+                    <button class="tab" data-tab="environment">🏠 環境</button>
+                    <button class="tab" data-tab="value">💰 CP值</button>
                 </div>
 
                 <div class="tab-content active" id="tab-taste">
                     <div class="dim-score-bar">
-                        <span class="dim-label">??閰?</span>
+                        <span class="dim-label">口味評分</span>
                         <div class="progress-bar"><div class="progress-fill" id="tasteProgress"></div></div>
                         <span class="dim-value" id="tasteVal">0</span>
                     </div>
@@ -234,7 +233,7 @@
 
                 <div class="tab-content" id="tab-service">
                     <div class="dim-score-bar">
-                        <span class="dim-label">??閰?</span>
+                        <span class="dim-label">服務評分</span>
                         <div class="progress-bar"><div class="progress-fill" id="serviceProgress"></div></div>
                         <span class="dim-value" id="serviceVal">0</span>
                     </div>
@@ -247,7 +246,7 @@
 
                 <div class="tab-content" id="tab-environment">
                     <div class="dim-score-bar">
-                        <span class="dim-label">?啣?閰?</span>
+                        <span class="dim-label">環境評分</span>
                         <div class="progress-bar"><div class="progress-fill" id="envProgress"></div></div>
                         <span class="dim-value" id="envVal">0</span>
                     </div>
@@ -260,7 +259,7 @@
 
                 <div class="tab-content" id="tab-value">
                     <div class="dim-score-bar">
-                        <span class="dim-label">CP?潸???/span>
+                        <span class="dim-label">CP值評分</span>
                         <div class="progress-bar"><div class="progress-fill" id="valueProgress"></div></div>
                         <span class="dim-value" id="valueVal">0</span>
                     </div>
@@ -276,22 +275,22 @@
         <div class="container">
             <div class="fake-card" id="fakeCard">
                 <div class="fake-header">
-                    <span class="fake-icon">??</span>
-                    <h3>?偌閰?霅衣內</h3>
-                    <span class="fake-badge" id="fakeBadge">銝剖漲瘜冽?</span>
+                    <span class="fake-icon">⚠️</span>
+                    <h3>灌水評論警示</h3>
+                    <span class="fake-badge" id="fakeBadge">中度注意</span>
                 </div>
                 <div class="fake-stats">
                     <div class="fake-stat">
                         <span class="fake-stat-value" id="fakeCount">0</span>
-                        <span class="fake-stat-label">?撮?偌</span>
+                        <span class="fake-stat-label">疑似灌水</span>
                     </div>
                     <div class="fake-stat">
                         <span class="fake-stat-value" id="fakePercent">0%</span>
-                        <span class="fake-stat-label">雿?</span>
+                        <span class="fake-stat-label">佔比</span>
                     </div>
                     <div class="fake-stat">
                         <span class="fake-stat-value" id="fakeTotal">0</span>
-                        <span class="fake-stat-label">蝮質?隢?/span>
+                        <span class="fake-stat-label">總評論</span>
                     </div>
                 </div>
                 <div class="fake-reasons" id="fakeReasons"></div>
@@ -305,7 +304,7 @@
     <!-- SECTION 4: Recommended Dishes -->
     <section class="section-dishes">
         <div class="container">
-            <h2 class="section-title">?? ?刻?</h2>
+            <h2 class="section-title">👍 推薦菜色</h2>
             <div class="dishes-list" id="recommendedDishes"></div>
         </div>
     </section>
@@ -313,7 +312,7 @@
     <!-- SECTION 5: Food Photo Gallery -->
     <section id="foodPhotoSection" class="section-photos hidden">
         <div class="container">
-            <h2 class="section-title">? 憌?抒?</h2>
+            <h2 class="section-title">📸 食物照片</h2>
             <div class="photo-gallery" id="photoGallery"></div>
         </div>
     </section>
@@ -321,61 +320,66 @@
     <!-- SECTION 6: Not Recommended Dishes -->
     <section class="section-dishes bad">
         <div class="container">
-            <h2 class="section-title">?? 銝?西???/h2>
+            <h2 class="section-title">👎 不推薦菜色</h2>
             <div class="dishes-list" id="notRecommendedDishes"></div>
         </div>
     </section>
 
     <!-- SECTION 7: Scene Recommendations -->
-    <section class="section-scene" id="sceneSection" style="display:none;">
+    <section id="sceneSection" class="section-scene" style="display:none;">
         <div class="container">
-            <h2 class="section-title">? ?拙??湔</h2>
-            <div class="scene-grid" id="sceneGrid"></div>
+            <h2 class="section-title">🎯 適合場景</h2>
+            <div id="sceneGrid" class="scene-grid"></div>
         </div>
     </section>
 
     <!-- SECTION 8: Best Visit Time -->
-    <section class="section-visit-time" id="visitTimeSection" style="display:none;">
+    <section id="visitTimeSection" class="section-visit-time" style="display:none;">
         <div class="container">
-            <h2 class="section-title">?? ?雿喲赤?挾</h2>
-            <p class="visit-time-summary" id="visitTimeSummary"></p>
-            <div class="visit-time-grid" id="visitTimeGrid"></div>
+            <h2 class="section-title">⏰ 最佳造訪時段</h2>
+            <p id="visitTimeSummary" class="visit-summary"></p>
+            <div id="visitTimeGrid" class="visit-time-grid"></div>
         </div>
     </section>
 
     <!-- SECTION 9: Rating Trend -->
-    <section class="section-trend" id="trendSection" style="display:none;">
+    <section id="trendSection" class="section-trend" style="display:none;">
         <div class="container">
-            <h2 class="section-title">?? 閰?頞典</h2>
             <div class="trend-card">
                 <div class="trend-header">
-                    <span class="trend-badge" id="trendBadge">蝛拙?</span>
-                    <p class="trend-summary" id="trendSummary"></p>
+                    <h2 class="section-title">📈 評價趨勢</h2>
+                    <span id="trendBadge" class="trend-badge">穩定</span>
                 </div>
-                <canvas id="trendChart" width="500" height="250"></canvas>
+                <p id="trendSummary" class="trend-summary"></p>
+                <canvas id="trendChart" height="200"></canvas>
             </div>
         </div>
     </section>
 
-    <!-- Download / Share -->
+    <!-- Action Buttons: Download / Share -->
     <section class="section-actions">
         <div class="container">
             <div class="action-buttons">
                 <button class="btn-download" id="downloadBtn" onclick="downloadReport()">
-                    ? 銝??勗???
+                    📸 下載報告圖片
                 </button>
-                <button class="btn-download btn-pdf" id="pdfBtn" onclick="downloadPDF()">
-                    ?? 銝? PDF ?勗?
+                <button class="btn-pdf" id="pdfBtn" onclick="downloadPDF()">
+                    📄 下載 PDF 報告
                 </button>
                 <button class="btn-share" id="copyBtn" onclick="copySummary()">
-                    ?? 銴ˊ????
+                    📋 複製分析摘要
                 </button>
             </div>
-            <div class="social-share" id="socialShare">
-                <span class="share-label">?澈?喉?</span>
-                <button class="social-btn social-line" onclick="shareTo('line')" title="?澈??LINE">LINE</button>
-                <button class="social-btn social-fb" onclick="shareTo('facebook')" title="?澈??Facebook">FB</button>
-                <button class="social-btn social-x" onclick="shareTo('x')" title="?澈??X">??</button>
+            <div class="social-share">
+                <button class="social-btn social-line" onclick="shareTo('line')" title="分享到 LINE">
+                    LINE
+                </button>
+                <button class="social-btn social-fb" onclick="shareTo('facebook')" title="分享到 Facebook">
+                    Facebook
+                </button>
+                <button class="social-btn social-x" onclick="shareTo('x')" title="分享到 X">
+                    𝕏
+                </button>
             </div>
         </div>
     </section>
@@ -385,13 +389,13 @@
 <!-- Photo Lightbox -->
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
-    <img class="lightbox-img" id="lightboxImg" alt="憌?抒?" src="">
+    <img class="lightbox-img" id="lightboxImg" alt="食物照片" src="">
 </div>
 
 <!-- Footer -->
 <footer class="footer">
     <div class="container">
-        <p>Google Maps 擗輒閰? AI ????&copy; 2025</p>
+        <p>Google Maps 餐廳評論 AI 分析器 &copy; 2025</p>
         <p class="footer-sub">Powered by Apify &middot; Gemini AI</p>
     </div>
 </footer>
