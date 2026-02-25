@@ -21,6 +21,18 @@
     const step3 = document.getElementById("step3");
 
     // ---------------------------------------------------------------------------
+    // Model toggle
+    // ---------------------------------------------------------------------------
+    var selectedModel = "gemini-3-flash-preview";
+    document.querySelectorAll(".model-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            document.querySelectorAll(".model-btn").forEach(function (b) { b.classList.remove("active"); });
+            btn.classList.add("active");
+            selectedModel = btn.getAttribute("data-model");
+        });
+    });
+
+    // ---------------------------------------------------------------------------
     // URL validation (client-side)
     // ---------------------------------------------------------------------------
     const URL_PATTERNS = [
@@ -428,7 +440,7 @@
         fetch("/api/analyze", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url: url }),
+            body: JSON.stringify({ url: url, model: selectedModel }),
             signal: controller.signal,
         })
             .then(function (res) {

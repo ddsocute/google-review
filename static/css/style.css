@@ -194,6 +194,54 @@ body {
     to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
+/* ---------- Model Toggle ---------- */
+.model-toggle {
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    margin-top: 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.model-btn {
+    flex: 1;
+    padding: 8px 16px;
+    background: var(--bg-white);
+    color: var(--text-secondary);
+    border: none;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.model-btn:first-child {
+    border-right: 1px solid var(--border);
+}
+
+.model-btn:hover {
+    background: var(--bg-hover);
+}
+
+.model-btn.active {
+    background: var(--gm-blue);
+    color: #fff;
+}
+
+.model-hint {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 6px;
+}
+
 .input-hint {
     color: var(--text-muted);
     font-size: 0.8rem;

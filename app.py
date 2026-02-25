@@ -28,6 +28,22 @@ MAX_REVIEWS_BLOCK_CHARS = int(os.getenv("MAX_REVIEWS_BLOCK_CHARS", "24000"))
 
 def resolve_short_url(url):
     """Resolve goo.gl / maps.app.goo.gl short links to full Google Maps URL."""
+    # Strip tracking query params that interfere with resolution
+    clean_url = re.sub(r'[?&](g_st|utm_\w+)=[^&]*', '', url).rstrip('?&')
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    }
+    for attempt_url in [clean_url, url]:
+        try:
+            resp = requests.get(attempt_url, headers=headers, allow_redirects=True, timeout=15, stream=True)
+            resp.close()
+            final = resp.url
+            # Strip any remaining tracking params from resolved URL
+            if '/maps/place/' in final:
+                return final
+        except Exception:
+            continue
+    # Fallback: try HEAD
     try:
         resp = requests.head(url, allow_redirects=True, timeout=15)
         return resp.url
@@ -223,7 +239,7 @@ SYSTEM_PROMPT = """你是一位頂尖的美食評論數據分析師，擅長從�
 }"""
 
 
-def analyse_reviews(reviews_data):
+def analyse_reviews(reviews_data, model="gemini-3-flash-preview"):
     """Send scraped reviews to OpenAI for analysis."""
     # Build a condensed text block from raw review items
     # Number each review and note which have photos
@@ -263,8 +279,13 @@ def analyse_reviews(reviews_data):
         "Content-Type": "application/json",
         "Authorization": f"Bearer {OPENAI_API_KEY}",
     }
+    # Validate model choice
+    allowed_models = {"gemini-3-flash-preview", "gemini-3-pro-preview"}
+    if model not in allowed_models:
+        model = "gemini-3-flash-preview"
+
     payload = {
-        "model": "gemini-3-pro-preview",
+        "model": model,
         "temperature": 0.15,
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -541,8 +562,9 @@ def api_analyze():
         return jsonify({"error": "No reviews found for this restaurant. Please check the link."}), 404
 
     # --- Step 2: AI analysis ---
+    model = body.get("model", "gemini-3-flash-preview")
     try:
-        analysis = analyse_reviews(reviews_data)
+        analysis = analyse_reviews(reviews_data, model=model)
     except requests.exceptions.Timeout:
         return jsonify({"error": "AI analysis timed out. Please try again."}), 504
     except requests.exceptions.HTTPError as e:
