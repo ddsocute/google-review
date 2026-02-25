@@ -2,6 +2,7 @@ import os
 import json
 import re
 import requests
+import urllib.parse
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -26,6 +27,22 @@ MAX_REVIEWS_BLOCK_CHARS = int(os.getenv("MAX_REVIEWS_BLOCK_CHARS", "24000"))
 # Helpers
 # ---------------------------------------------------------------------------
 
+def normalize_maps_url(url):
+    """Convert google.com/maps?q=...&ftid=... to /maps/place/ format for Apify."""
+    if '/maps/place/' in url:
+        return url
+    parsed = urllib.parse.urlparse(url)
+    params = urllib.parse.parse_qs(parsed.query)
+    q = params.get('q', [''])[0]
+    ftid = params.get('ftid', [''])[0]
+    if q and ftid:
+        place_url = f"https://www.google.com/maps/place/{urllib.parse.quote(q)}/?ftid={ftid}"
+        return place_url
+    if q:
+        return f"https://www.google.com/maps/place/{urllib.parse.quote(q)}/"
+    return url
+
+
 def resolve_short_url(url):
     """Resolve goo.gl / maps.app.goo.gl short links to full Google Maps URL."""
     # Strip tracking query params that interfere with resolution
@@ -38,15 +55,14 @@ def resolve_short_url(url):
             resp = requests.get(attempt_url, headers=headers, allow_redirects=True, timeout=15, stream=True)
             resp.close()
             final = resp.url
-            # Strip any remaining tracking params from resolved URL
-            if '/maps/place/' in final:
-                return final
+            # Normalize the resolved URL to /maps/place/ format
+            return normalize_maps_url(final)
         except Exception:
             continue
     # Fallback: try HEAD
     try:
         resp = requests.head(url, allow_redirects=True, timeout=15)
-        return resp.url
+        return normalize_maps_url(resp.url)
     except Exception:
         return url
 
@@ -55,6 +71,9 @@ def validate_google_maps_url(url):
     """Return True if url looks like a valid Google Maps place link."""
     patterns = [
         r"https?://(www\.)?google\.(com|com\.\w{2})/maps/place/",
+        r"https?://(www\.)?google\.(com|com\.\w{2})/maps\?.*ftid=",
+        r"https?://(www\.)?google\.(com|com\.\w{2})/maps/?",
+        r"https?://(maps\.)?google\.(com|com\.\w{2})/maps",
         r"https?://maps\.app\.goo\.gl/",
         r"https?://goo\.gl/maps/",
     ]

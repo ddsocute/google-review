@@ -37,6 +37,8 @@
     // ---------------------------------------------------------------------------
     const URL_PATTERNS = [
         /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps\/place\//i,
+        /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps/i,
+        /https?:\/\/(maps\.)?google\.(com|com\.\w{2})\/maps/i,
         /https?:\/\/maps\.app\.goo\.gl\//i,
         /https?:\/\/goo\.gl\/maps\//i,
     ];
