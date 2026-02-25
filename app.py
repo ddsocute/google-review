@@ -317,11 +317,12 @@ def analyse_reviews(reviews_data, model="gemini-3-flash-preview"):
     analysis = None
     for attempt in range(2):
         try:
+            api_timeout = 300 if model == "gemini-3-pro-preview" else 180
             resp = requests.post(
                 f"{OPENAI_BASE_URL}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=180,
+                timeout=api_timeout,
             )
             resp.raise_for_status()
             data = resp.json()
@@ -331,6 +332,8 @@ def analyse_reviews(reviews_data, model="gemini-3-flash-preview"):
         except (json.JSONDecodeError, KeyError, TypeError) as e:
             last_error = e
             payload["messages"][-1]["content"] += "\n\n請再重試一次：只能輸出可被 json.loads 解析的單一 JSON 物件，不要 markdown、不要註解。"
+        except requests.exceptions.Timeout:
+            raise  # let caller handle timeout directly
         except Exception as e:
             last_error = e
             break
@@ -597,7 +600,9 @@ def api_analyze():
     try:
         analysis = analyse_reviews(reviews_data, model=model)
     except requests.exceptions.Timeout:
-        return jsonify({"error": "AI 分析逾時，請切換到「快速模式」或稍後再試"}), 504
+        if model == "gemini-3-pro-preview":
+            return jsonify({"error": "完整模式 AI 分析逾時（Pro 模型回應較慢），請改用「快速模式」或稍後再試"}), 504
+        return jsonify({"error": "AI 分析逾時，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
         status = e.response.status_code if e.response else 0
         if status == 429:
