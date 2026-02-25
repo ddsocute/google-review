@@ -248,6 +248,27 @@ body {
     margin-top: 12px;
 }
 
+/* ---------- Demo Button ---------- */
+.btn-demo {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 8px 20px;
+    background: transparent;
+    color: var(--gm-blue);
+    border: 1px dashed var(--gm-blue);
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-demo:hover {
+    background: var(--gm-blue-bg);
+    border-style: solid;
+}
+
 /* ---------- Loading Section ---------- */
 .loading-section {
     padding: 32px 0;
@@ -259,6 +280,30 @@ body {
     padding: 28px 24px;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border-light);
+}
+
+.loading-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-light);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.loading-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gm-blue), var(--gm-green));
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.6s ease;
+}
+
+.loading-progress-text {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 20px;
 }
 
 .loading-steps {
@@ -423,6 +468,38 @@ body {
 
 .btn-retry:hover {
     background: #1557b0;
+}
+
+.btn-retry-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.btn-retry-secondary:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.error-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* ---------- Radar Chart ---------- */
+.radar-card {
+    display: none;
+    background: var(--bg-white);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow-sm);
+    max-width: 380px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* ---------- Section: Restaurant Intro ---------- */
@@ -1103,6 +1180,36 @@ body {
     align-items: center;
     justify-content: center;
     line-height: 1;
+}
+
+/* ---------- Download / Actions ---------- */
+.section-actions {
+    padding: 24px 0 8px;
+    text-align: center;
+}
+
+.btn-download {
+    display: inline-block;
+    padding: 12px 28px;
+    background: var(--gm-blue);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-full);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.btn-download:hover {
+    background: #1557b0;
+    box-shadow: var(--shadow);
+}
+
+.btn-download:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 /* ---------- Footer ---------- */

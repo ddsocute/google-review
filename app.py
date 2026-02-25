@@ -555,43 +555,58 @@ def api_analyze():
     url = (body.get("url") or "").strip()
 
     if not url:
-        return jsonify({"error": "Please provide a Google Maps URL."}), 400
+        return jsonify({"error": "請提供 Google Maps 餐廳連結"}), 400
 
     # Validate URL format
     if not validate_google_maps_url(url):
-        return jsonify({"error": "Invalid Google Maps URL. Please paste a valid restaurant link."}), 400
+        return jsonify({"error": "網址格式不正確，請貼上 Google Maps 餐廳連結（支援短網址）"}), 400
 
     # Resolve short link
     if "goo.gl" in url:
-        url = resolve_short_url(url)
+        try:
+            url = resolve_short_url(url)
+        except Exception:
+            return jsonify({"error": "短網址解析失敗，請改用完整的 Google Maps 連結"}), 400
         if not validate_google_maps_url(url):
-            return jsonify({"error": "Could not resolve short link. Please use the full Google Maps URL."}), 400
+            return jsonify({"error": "短網址解析後非有效的 Google Maps 連結，請確認連結是否正確"}), 400
 
     # --- Step 1: Scrape reviews ---
     try:
         reviews_data = scrape_reviews(url)
     except requests.exceptions.Timeout:
-        return jsonify({"error": "Scraping timed out. The restaurant may have too many reviews. Try again later."}), 504
+        return jsonify({"error": "抓取評論逾時，可能是餐廳評論過多，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
-        return jsonify({"error": f"Apify API error: {e.response.status_code} - {e.response.text[:200]}"}), 502
+        status = e.response.status_code if e.response else 0
+        if status == 401:
+            return jsonify({"error": "Apify API Token 已失效，請聯繫管理員"}), 502
+        if status == 429:
+            return jsonify({"error": "本月 API 額度已用完，請下個月再試或聯繫管理員"}), 429
+        return jsonify({"error": f"抓取評論時發生錯誤 (HTTP {status})，請稍後再試"}), 502
     except Exception as e:
-        return jsonify({"error": f"Failed to scrape reviews: {str(e)}"}), 500
+        return jsonify({"error": f"抓取評論失敗：{str(e)[:100]}"}), 500
 
     if not reviews_data:
-        return jsonify({"error": "No reviews found for this restaurant. Please check the link."}), 404
+        return jsonify({"error": "此餐廳沒有找到任何評論，請確認連結是否正確"}), 404
+
+    if len(reviews_data) < 3:
+        # Still proceed but warn
+        pass
 
     # --- Step 2: AI analysis ---
     model = body.get("model", "gemini-3-flash-preview")
     try:
         analysis = analyse_reviews(reviews_data, model=model)
     except requests.exceptions.Timeout:
-        return jsonify({"error": "AI analysis timed out. Please try again."}), 504
+        return jsonify({"error": "AI 分析逾時，請切換到「快速模式」或稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
-        return jsonify({"error": f"OpenAI API error: {e.response.status_code}"}), 502
+        status = e.response.status_code if e.response else 0
+        if status == 429:
+            return jsonify({"error": "AI API 額度不足，請稍後再試"}), 429
+        return jsonify({"error": f"AI 分析服務錯誤 (HTTP {status})，請稍後重試"}), 502
     except json.JSONDecodeError:
-        return jsonify({"error": "AI returned invalid data. Please try again."}), 500
+        return jsonify({"error": "AI 回傳格式異常，請重新嘗試（建議切換模式）"}), 500
     except Exception as e:
-        return jsonify({"error": f"AI analysis failed: {str(e)}"}), 500
+        return jsonify({"error": f"AI 分析失敗：{str(e)[:100]}"}), 500
 
     # --- Step 3: Enrich with photos ---
     try:

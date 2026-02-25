@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#ffffff">
 
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.json?v=20260226">
+    <link rel="manifest" href="/manifest.json?v=20260227">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
 
     <!-- Google Fonts -->
@@ -16,7 +16,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="/static/css/style.css?v=20260226">
+    <link rel="stylesheet" href="/static/css/style.css?v=20260227">
 
     <!-- Critical inline styles as fallback while CSS loads -->
     <style>
@@ -58,6 +58,7 @@
             </button>
         </div>
         <p class="input-hint">支援格式: google.com/maps/place/... 或 maps.app.goo.gl/... 短連結</p>
+        <button id="demoBtn" class="btn-demo" type="button">📍 試試範例：鼎泰豐信義店</button>
     </div>
 </header>
 
@@ -66,13 +67,17 @@
     <div class="container">
         <div class="loading-card">
             <div class="loading-steps">
+                <div class="loading-progress-bar">
+                    <div class="loading-progress-fill" id="loadingProgressFill"></div>
+                </div>
+                <p class="loading-progress-text" id="loadingProgressText">準備中...</p>
                 <div class="step" id="step1">
                     <div class="step-icon">
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title">正在抓取評論...</p>
-                        <p class="step-desc">連接 Google Maps 取得餐廳評論資料</p>
+                        <p class="step-title" id="step1Title">正在抓取評論...</p>
+                        <p class="step-desc" id="step1Desc">連接 Google Maps 取得餐廳評論資料</p>
                     </div>
                 </div>
                 <div class="step" id="step2">
@@ -80,8 +85,8 @@
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title">AI 深度分析中...</p>
-                        <p class="step-desc">使用 Gemini AI 進行多維度評論分析</p>
+                        <p class="step-title" id="step2Title">AI 深度分析中...</p>
+                        <p class="step-desc" id="step2Desc">使用 Gemini AI 進行多維度評論分析</p>
                     </div>
                 </div>
                 <div class="step" id="step3">
@@ -89,8 +94,8 @@
                         <div class="spinner"></div>
                     </div>
                     <div class="step-info">
-                        <p class="step-title">產生分析報告...</p>
-                        <p class="step-desc">整理結果並以 AI 辨識菜品照片</p>
+                        <p class="step-title" id="step3Title">產生分析報告...</p>
+                        <p class="step-desc" id="step3Desc">整理結果並收集菜品照片</p>
                     </div>
                 </div>
             </div>
@@ -134,9 +139,12 @@
     <div class="container">
         <div class="error-card">
             <span class="error-icon">😥</span>
-            <h2>分析失敗</h2>
+            <h2 id="errorTitle">分析失敗</h2>
             <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
-            <button class="btn-retry" onclick="resetUI()">重新嘗試</button>
+            <div class="error-actions">
+                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">🔄 重新分析</button>
+                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">↩ 返回重新輸入</button>
+            </div>
         </div>
     </div>
 </section>
@@ -149,6 +157,12 @@
         <div class="container">
             <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
             <p class="review-count" id="reviewCount">已分析 0 則評論</p>
+
+            <!-- Radar Chart -->
+            <div class="radar-card" id="radarCard">
+                <canvas id="radarChart" width="300" height="300"></canvas>
+            </div>
+
             <div class="intro-card">
                 <h3 class="intro-title">📖 餐廳完整介紹</h3>
                 <p class="intro-text" id="restaurantIntro"></p>
@@ -303,6 +317,15 @@
         </div>
     </section>
 
+    <!-- Download / Share -->
+    <section class="section-actions">
+        <div class="container">
+            <button class="btn-download" id="downloadBtn" onclick="downloadReport()">
+                📸 下載分析報告圖片
+            </button>
+        </div>
+    </section>
+
 </main>
 
 <!-- Photo Lightbox -->
@@ -319,6 +342,8 @@
     </div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 if ("serviceWorker" in navigator) {
     navigator.serviceWorker.getRegistrations().then(function (registrations) {
@@ -328,6 +353,6 @@ if ("serviceWorker" in navigator) {
     }).catch(function () {});
 }
 </script>
-<script src="/static/js/app.js?v=20260226"></script>
+<script src="/static/js/app.js?v=20260227"></script>
 </body>
 </html>
