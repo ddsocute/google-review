@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Maps 餐廳評論 AI 分析器</title>
+    <meta name="description" content="貼入 Google Maps 餐廳連結, AI 自動分析評論, 推薦菜色一目了然">
+    <meta name="theme-color" content="#ffffff">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json?v=20260225">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="/static/css/style.css?v=20260225">
+</head>
+<body>
+
+<!-- ====== HERO / INPUT ====== -->
+<header class="hero">
+    <div class="hero-bg"></div>
+    <div class="container">
+        <h1 class="hero-title">
+            <span class="icon-plate">🍽️</span>
+            Google Maps 餐廳評論<br><span class="highlight">AI 分析器</span>
+        </h1>
+        <p class="hero-subtitle">貼上 Google Maps 餐廳連結, AI 幫你深度分析所有評論</p>
+
+        <div class="input-group">
+            <input
+                type="url"
+                id="urlInput"
+                class="url-input"
+                placeholder="貼上 Google Maps 餐廳連結..."
+                autocomplete="off"
+            >
+            <button id="analyzeBtn" class="btn-analyze" type="button">
+                <span class="btn-text">開始分析</span>
+                <span class="btn-loader" aria-hidden="true"></span>
+            </button>
+        </div>
+        <p class="input-hint">支援格式: google.com/maps/place/... 或 maps.app.goo.gl/... 短連結</p>
+    </div>
+</header>
+
+<!-- ====== LOADING ====== -->
+<section id="loadingSection" class="loading-section hidden">
+    <div class="container">
+        <div class="loading-card">
+            <div class="loading-steps">
+                <div class="step" id="step1">
+                    <div class="step-icon">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="step-info">
+                        <p class="step-title">正在抓取評論...</p>
+                        <p class="step-desc">連接 Google Maps 取得餐廳評論資料</p>
+                    </div>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-icon">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="step-info">
+                        <p class="step-title">AI 深度分析中...</p>
+                        <p class="step-desc">使用 Gemini AI 進行多維度評論分析</p>
+                    </div>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-icon">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="step-info">
+                        <p class="step-title">產生分析報告...</p>
+                        <p class="step-desc">整理結果並以 AI 辨識菜品照片</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== SKELETON LOADING ====== -->
+<section id="skeletonSection" class="hidden">
+    <div class="container">
+        <div class="skeleton-card">
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+            <div class="skeleton-circle"></div>
+            <div class="skeleton-line w80"></div>
+            <div class="skeleton-line w50"></div>
+        </div>
+        <div class="skeleton-row">
+            <div class="skeleton-card small">
+                <div class="skeleton-line w60"></div>
+                <div class="skeleton-line w40"></div>
+            </div>
+            <div class="skeleton-card small">
+                <div class="skeleton-line w60"></div>
+                <div class="skeleton-line w40"></div>
+            </div>
+            <div class="skeleton-card small">
+                <div class="skeleton-line w60"></div>
+                <div class="skeleton-line w40"></div>
+            </div>
+            <div class="skeleton-card small">
+                <div class="skeleton-line w60"></div>
+                <div class="skeleton-line w40"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ====== ERROR ====== -->
+<section id="errorSection" class="hidden">
+    <div class="container">
+        <div class="error-card">
+            <span class="error-icon">😥</span>
+            <h2>分析失敗</h2>
+            <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
+            <button class="btn-retry" onclick="resetUI()">重新嘗試</button>
+        </div>
+    </div>
+</section>
+
+<!-- ====== RESULTS ====== -->
+<main id="resultsSection" class="hidden">
+
+    <!-- SECTION 1: Restaurant Intro -->
+    <section class="section-intro">
+        <div class="container">
+            <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
+            <p class="review-count" id="reviewCount">已分析 0 則評論</p>
+            <div class="intro-card">
+                <h3 class="intro-title">📖 餐廳完整介紹</h3>
+                <p class="intro-text" id="restaurantIntro"></p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 2: Dimensions -->
+    <section class="section-overview-dims">
+        <div class="container">
+            <h2 class="section-title">📊 各項評分</h2>
+
+            <!-- Top: 4 metric cards -->
+            <div class="overview-grid">
+                <div class="metrics-grid metrics-grid-full">
+                    <div class="metric-card" data-color="coral">
+                        <div class="metric-icon">🍜</div>
+                        <div class="metric-score" id="tasteScore">0</div>
+                        <div class="metric-label">口味</div>
+                    </div>
+                    <div class="metric-card" data-color="gold">
+                        <div class="metric-icon">🙋</div>
+                        <div class="metric-score" id="serviceScore">0</div>
+                        <div class="metric-label">服務</div>
+                    </div>
+                    <div class="metric-card" data-color="mint">
+                        <div class="metric-icon">🏠</div>
+                        <div class="metric-score" id="envScore">0</div>
+                        <div class="metric-label">環境</div>
+                    </div>
+                    <div class="metric-card" data-color="violet">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-score" id="cpScore">0</div>
+                        <div class="metric-label">CP值</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom: dimension detail tabs -->
+            <div class="dims-detail">
+                <div class="tabs">
+                    <button class="tab active" data-tab="taste">🍜 口味</button>
+                    <button class="tab" data-tab="service">🙋 服務</button>
+                    <button class="tab" data-tab="environment">🏠 環境</button>
+                    <button class="tab" data-tab="value">💰 CP值</button>
+                </div>
+
+                <div class="tab-content active" id="tab-taste">
+                    <div class="dim-score-bar">
+                        <span class="dim-label">口味評分</span>
+                        <div class="progress-bar"><div class="progress-fill" id="tasteProgress"></div></div>
+                        <span class="dim-value" id="tasteVal">0</span>
+                    </div>
+                    <p class="dim-summary" id="tasteSummary"></p>
+                    <div class="tags-group">
+                        <div class="tags-row" id="tastePositive"></div>
+                        <div class="tags-row" id="tasteNegative"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-service">
+                    <div class="dim-score-bar">
+                        <span class="dim-label">服務評分</span>
+                        <div class="progress-bar"><div class="progress-fill" id="serviceProgress"></div></div>
+                        <span class="dim-value" id="serviceVal">0</span>
+                    </div>
+                    <p class="dim-summary" id="serviceSummary"></p>
+                    <div class="tags-group">
+                        <div class="tags-row" id="servicePositive"></div>
+                        <div class="tags-row" id="serviceNegative"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-environment">
+                    <div class="dim-score-bar">
+                        <span class="dim-label">環境評分</span>
+                        <div class="progress-bar"><div class="progress-fill" id="envProgress"></div></div>
+                        <span class="dim-value" id="envVal">0</span>
+                    </div>
+                    <p class="dim-summary" id="envSummary"></p>
+                    <div class="tags-group">
+                        <div class="tags-row" id="envPositive"></div>
+                        <div class="tags-row" id="envNegative"></div>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="tab-value">
+                    <div class="dim-score-bar">
+                        <span class="dim-label">CP值評分</span>
+                        <div class="progress-bar"><div class="progress-fill" id="valueProgress"></div></div>
+                        <span class="dim-value" id="valueVal">0</span>
+                    </div>
+                    <p class="dim-summary" id="valueSummary"></p>
+                    <p class="price-range" id="priceRange"></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 3: Fake Review Warning -->
+    <section id="fakeReviewSection" class="section-fake hidden">
+        <div class="container">
+            <div class="fake-card" id="fakeCard">
+                <div class="fake-header">
+                    <span class="fake-icon">⚠️</span>
+                    <h3>灌水評論警示</h3>
+                    <span class="fake-badge" id="fakeBadge">中度注意</span>
+                </div>
+                <div class="fake-stats">
+                    <div class="fake-stat">
+                        <span class="fake-stat-value" id="fakeCount">0</span>
+                        <span class="fake-stat-label">疑似灌水</span>
+                    </div>
+                    <div class="fake-stat">
+                        <span class="fake-stat-value" id="fakePercent">0%</span>
+                        <span class="fake-stat-label">佔比</span>
+                    </div>
+                    <div class="fake-stat">
+                        <span class="fake-stat-value" id="fakeTotal">0</span>
+                        <span class="fake-stat-label">總評論</span>
+                    </div>
+                </div>
+                <div class="fake-reasons" id="fakeReasons"></div>
+                <p class="fake-details" id="fakeDetails"></p>
+                <!-- Activity Timeline -->
+                <div class="fake-timeline" id="fakeTimeline"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 4: Recommended Dishes -->
+    <section class="section-dishes">
+        <div class="container">
+            <h2 class="section-title">👍 推薦菜色</h2>
+            <div class="dishes-list" id="recommendedDishes"></div>
+        </div>
+    </section>
+
+    <!-- SECTION 5: Food Photo Gallery -->
+    <section id="foodPhotoSection" class="section-photos hidden">
+        <div class="container">
+            <h2 class="section-title">📸 食物照片</h2>
+            <div class="photo-gallery" id="photoGallery"></div>
+        </div>
+    </section>
+
+    <!-- SECTION 6: Not Recommended Dishes -->
+    <section class="section-dishes bad">
+        <div class="container">
+            <h2 class="section-title">👎 不推薦菜色</h2>
+            <div class="dishes-list" id="notRecommendedDishes"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- Footer -->
+<footer class="footer">
+    <div class="container">
+        <p>Google Maps 餐廳評論 AI 分析器 &copy; 2025</p>
+        <p class="footer-sub">Powered by Apify &middot; Gemini AI</p>
+    </div>
+</footer>
+
+<script>
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+        registrations.forEach(function (registration) {
+            registration.unregister();
+        });
+    }).catch(function () {});
+}
+</script>
+<script src="/static/js/app.js?v=20260225"></script>
+</body>
+</html>
