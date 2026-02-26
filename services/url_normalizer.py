@@ -144,8 +144,12 @@ def canonicalize(url: str) -> Dict[str, Any]:
     except Exception:
         parsed = urllib.parse.urlparse(url)
 
-    # 統一成 google.com 網域以提高快取命中率（實際解析仍由瀏覽器 / Apify 決定）
-    base_netloc = "www.google.com"
+    # 對於 Google Maps 網域，統一成 google.com 以提高快取命中率；
+    # 對於 maps.app.goo.gl 等短網址，則保留原本網域，讓下游自行跟隨轉址。
+    if _is_google_maps_domain(parsed.netloc):
+        base_netloc = "www.google.com"
+    else:
+        base_netloc = parsed.netloc
     path = parsed.path or "/maps"
 
     # 建立 canonical_url
@@ -158,9 +162,11 @@ def canonicalize(url: str) -> Dict[str, Any]:
         # 仍然移除多餘 query，只保留 ALLOWED_QUERY_KEYS
         safe_url = clean_tracking_params(cleaned_url)
         parsed2 = urllib.parse.urlparse(safe_url)
-        # 若不是 maps 路徑，就強制補上 /maps
-        if not parsed2.path.startswith("/maps"):
-            parsed2 = parsed2._replace(path="/maps")
+        # 若是 Google Maps 網域且不是 /maps 路徑，就強制補上 /maps；
+        # 對 maps.app.goo.gl 等短網址則維持原始路徑，避免丟失短網址代碼。
+        if _is_google_maps_domain(parsed2.netloc):
+            if not parsed2.path.startswith("/maps"):
+                parsed2 = parsed2._replace(path="/maps")
         canonical_url = urllib.parse.urlunparse(
             ("https", base_netloc, parsed2.path, "", parsed2.query, "")
         )

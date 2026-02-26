@@ -80,6 +80,7 @@ def validate_google_maps_url(url):
     """Return True if url looks like a valid Google Maps place link."""
     patterns = [
         r"https?://(www\.)?google\.(com|com\.\w{2})/maps/place/",
+        r"https?://(www\.)?google\.(com|com\.\w{2})/maps/search/",
         r"https?://(www\.)?google\.(com|com\.\w{2})/maps\?.*ftid=",
         r"https?://(www\.)?google\.(com|com\.\w{2})/maps/?",
         r"https?://(maps\.)?google\.(com|com\.\w{2})/maps",
