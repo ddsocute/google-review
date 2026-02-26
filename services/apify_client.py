@@ -7,6 +7,45 @@ import requests
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 MAX_SCRAPE_REVIEWS_DEFAULT = int(os.getenv("MAX_SCRAPE_REVIEWS", "90"))
 
+# 可以透過環境變數覆寫 Apify Actor ID，預設使用官方 Compass Reviews Scraper 與
+# 「Google Maps 店家名單採集工具」(futurizerush/google-maps-scraper-zh-tw)。
+APIFY_REVIEWS_ACTOR_ID = os.getenv(
+    "APIFY_REVIEWS_ACTOR_ID",
+    "compass~Google-Maps-Reviews-Scraper",
+)
+APIFY_PLACES_ACTOR_ID = os.getenv(
+    "APIFY_PLACES_ACTOR_ID",
+    "futurizerush~google-maps-scraper-zh-tw",
+)
+
+
+def _apify_run_actor(actor_id: str, payload: Dict[str, Any], timeout: int = 300):
+    """共用的 Apify actor 呼叫 helper。
+
+    會：
+    - 自動帶入 APIFY_TOKEN
+    - 處理 list / {items: [...]} 兩種回傳格式
+    """
+    if not APIFY_TOKEN:
+        # 統一在呼叫端處理「沒有 token」的情況，因此這裡直接 raise 讓上層捕捉。
+        raise RuntimeError("APIFY_TOKEN not set")
+
+    url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items"
+    resp = requests.post(
+        url,
+        params={"token": APIFY_TOKEN},
+        json=payload,
+        timeout=timeout,
+    )
+    resp.raise_for_status()
+
+    data = resp.json()
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "items" in data:
+        return list(data.get("items") or [])
+    return []
+
 
 def scrape_reviews(
     google_maps_url: str,
@@ -32,21 +71,90 @@ def scrape_reviews(
         "personalData": False,
     }
 
-    resp = requests.post(
-        "https://api.apify.com/v2/acts/compass~Google-Maps-Reviews-Scraper/run-sync-get-dataset-items",
-        params={"token": APIFY_TOKEN},
-        json=payload,
-        timeout=300,
-    )
-    resp.raise_for_status()
-
-    data = resp.json()
-    # Apify 這個 endpoint 理論上會直接回傳 list
-    if isinstance(data, list):
-        return data
-    if isinstance(data, dict) and "items" in data:
-        return list(data.get("items") or [])
-    return []
+    return _apify_run_actor(APIFY_REVIEWS_ACTOR_ID, payload, timeout=300)
 
 
-__all__ = ["scrape_reviews"]
+def search_places_by_text(
+    query: str,
+    limit: int = 6,
+    language: str = "zh-TW",
+) -> List[Dict[str, Any]]:
+    """
+    使用 Apify 的 Google Maps 商家爬蟲依「店名 / 關鍵字」搜尋店家清單。
+
+    回傳格式會被整理成：
+    [
+      {
+        "place_id": str | None,
+        "name": str,
+        "address": str,
+        "rating": float | None,
+        "user_ratings_total": int | None,
+        "maps_url": str | None,
+      },
+      ...
+    ]
+    """
+    if not APIFY_TOKEN:
+        raise RuntimeError("APIFY_TOKEN not set")
+
+    # Apify 官方文件使用的欄位名稱為 searchQueries，這裡僅搜尋單一關鍵字。
+    payload = {
+        "searchQueries": [query],
+        "maxResults": max(limit, 1),
+        "language": language,
+        # 我們只需要店家清單，不需要額外撈 email/網站，以節省成本與時間
+        "scrapeReviews": False,
+        "scrapeEmails": False,
+    }
+
+    raw_items = _apify_run_actor(APIFY_PLACES_ACTOR_ID, payload, timeout=300)
+
+    results: List[Dict[str, Any]] = []
+    for item in raw_items[:limit]:
+        if not isinstance(item, dict):
+            continue
+
+        place_id = (
+            item.get("placeId")
+            or item.get("googlePlaceId")
+            or item.get("id")
+        )
+        name = item.get("name") or item.get("title") or ""
+        address = (
+            item.get("address")
+            or item.get("formattedAddress")
+            or item.get("fullAddress")
+            or ""
+        )
+        rating = (
+            item.get("rating")
+            or item.get("totalScore")
+            or item.get("stars")
+        )
+        user_ratings_total = (
+            item.get("userRatingsTotal")
+            or item.get("reviewsCount")
+            or item.get("reviews")
+        )
+        maps_url = (
+            item.get("url")
+            or item.get("mapsUrl")
+            or (f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else None)
+        )
+
+        results.append(
+            {
+                "place_id": place_id,
+                "name": name,
+                "address": address,
+                "rating": rating,
+                "user_ratings_total": user_ratings_total,
+                "maps_url": maps_url,
+            }
+        )
+
+    return results
+
+
+__all__ = ["scrape_reviews", "search_places_by_text"]
