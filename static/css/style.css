@@ -83,8 +83,25 @@ body {
     min-height: 100vh;
 }
 
+/* 預設：桌機與手機都會有「選單」按鈕，桌機用來收合側邊欄，手機則開啟抽屜 */
 .sidebar-toggle {
-    display: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 1100;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-light);
+    background: rgba(249,246,240,0.96);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
 }
 
 .sidebar-backdrop {
@@ -150,6 +167,11 @@ body {
 
 .page.page-active {
     display: block;
+}
+
+/* 桌機：允許把側邊欄收合起來，讓內容置中 */
+body.sidebar-collapsed .sidebar {
+    display: none;
 }
 
 /* ---------- Hero / Input ---------- */

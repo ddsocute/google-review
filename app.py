@@ -498,7 +498,9 @@ def classify_photo_category(photo_url):
         "Content-Type": "application/json",
     }
     payload = {
-        "model": "gpt-4o-mini",
+        # 使用與文字分析相同的 Gemini 多模態模型，避免 gpt-4o-mini
+        # 在自架 OPENAI_BASE_URL 上可能出現「模型不存在」的錯誤。
+        "model": "gemini-3-flash-preview",
         "temperature": 0.1,
         "max_tokens": 10,
         "messages": [

@@ -294,11 +294,24 @@
             return;
         }
 
-        var scores = [
-            data.taste ? data.taste.score : 0,
-            data.service ? data.service.score : 0,
-            data.environment ? data.environment.score : 0,
-            data.value_for_money ? data.value_for_money.score : 0,
+        var tasteScore = data.taste && typeof data.taste.score === "number" ? data.taste.score : 0;
+        var serviceScore = data.service && typeof data.service.score === "number" ? data.service.score : 0;
+        var envScore = data.environment && typeof data.environment.score === "number" ? data.environment.score : 0;
+        var valueScore = data.value_for_money && typeof data.value_for_money.score === "number" ? data.value_for_money.score : 0;
+
+        var scores = [tasteScore, serviceScore, envScore, valueScore];
+
+        // 在雷達圖標籤旁邊直接顯示各維度分數（例如「口味 8.2」）
+        function formatLabel(label, score) {
+            if (score == null || isNaN(score)) return label;
+            return label + " " + score.toFixed(1);
+        }
+
+        var labels = [
+            formatLabel("口味", tasteScore),
+            formatLabel("服務", serviceScore),
+            formatLabel("環境", envScore),
+            formatLabel("CP值", valueScore),
         ];
 
         if (radarChartInstance) {
@@ -312,7 +325,7 @@
         radarChartInstance = new Chart(canvas, {
             type: "radar",
             data: {
-                labels: ["口味", "服務", "環境", "CP值"],
+                labels: labels,
                 datasets: [{
                     label: "評分",
                     data: scores,
@@ -821,10 +834,10 @@
         if (!lastAnalysisData) return;
         var d = lastAnalysisData;
         var text = "食神｜" + (d.restaurant_name || "餐廳") + " - Google Maps 評論分析報告\n\n";
-        text += "總評分：" + (d.overall_score || "N/A") + "/10\n";
-        text += "口味：" + (d.taste ? d.taste.score : "?") + " | ";
-        text += "服務：" + (d.service ? d.service.score : "?") + " | ";
-        text += "環境：" + (d.environment ? d.environment.score : "?") + " | ";
+        text += "四大指標評分（1–10）：\n";
+        text += "口味：" + (d.taste ? d.taste.score : "?") + "，";
+        text += "服務：" + (d.service ? d.service.score : "?") + "，";
+        text += "環境：" + (d.environment ? d.environment.score : "?") + "，";
         text += "CP值：" + (d.value_for_money ? d.value_for_money.score : "?") + "\n\n";
         if (d.recommended_dishes && d.recommended_dishes.length) {
             text += "推薦菜色：" + d.recommended_dishes.map(function (dd) { return dd.name; }).join("、") + "\n";
@@ -861,8 +874,13 @@
     window.shareTo = function (platform) {
         if (!lastAnalysisData) return;
         var name = lastAnalysisData.restaurant_name || "餐廳";
-        var score = lastAnalysisData.overall_score || "?";
-        var shareText = "食神｜" + name + " Google Maps 評論分析，整體評分 " + score + "/10";
+        var t = lastAnalysisData;
+        var shareText = "食神｜" + name + " Google Maps 評論分析，四大指標："
+            + "口味 " + (t.taste ? t.taste.score : "?")
+            + "・服務 " + (t.service ? t.service.score : "?")
+            + "・環境 " + (t.environment ? t.environment.score : "?")
+            + "・CP值 " + (t.value_for_money ? t.value_for_money.score : "?")
+            + "（滿分 10 分）";
         var shareUrl = window.location.href;
         var url;
         switch (platform) {
