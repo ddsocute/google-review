@@ -28,33 +28,6 @@
     var trendChartInstance = null;
 
     // ---------------------------------------------------------------------------
-    // Dark Mode
-    // ---------------------------------------------------------------------------
-    function initDarkMode() {
-        var saved = localStorage.getItem("darkMode");
-        var btn = document.getElementById("darkModeToggle");
-        if (saved === "true") {
-            document.documentElement.setAttribute("data-theme", "dark");
-            if (btn) btn.textContent = "亮";
-        }
-        if (btn) {
-            btn.addEventListener("click", function () {
-                var isDark = document.documentElement.getAttribute("data-theme") === "dark";
-                if (isDark) {
-                    document.documentElement.removeAttribute("data-theme");
-                    localStorage.setItem("darkMode", "false");
-                    btn.textContent = "暗";
-                } else {
-                    document.documentElement.setAttribute("data-theme", "dark");
-                    localStorage.setItem("darkMode", "true");
-                    btn.textContent = "亮";
-                }
-            });
-        }
-    }
-    initDarkMode();
-
-    // ---------------------------------------------------------------------------
     // Search History (localStorage)
     // ---------------------------------------------------------------------------
     var HISTORY_KEY = "analysisHistory";
@@ -124,11 +97,9 @@
     // URL validation (client-side)
     // ---------------------------------------------------------------------------
     const URL_PATTERNS = [
+        // 僅支援使用者指定的兩種格式
         /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps\/place\//i,
-        /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps/i,
-        /https?:\/\/(maps\.)?google\.(com|com\.\w{2})\/maps/i,
         /https?:\/\/maps\.app\.goo\.gl\//i,
-        /https?:\/\/goo\.gl\/maps\//i,
     ];
 
     function isValidUrl(url) {
@@ -585,18 +556,8 @@
             summaryEl.textContent = sum ? "總結來說：" + sum : "";
         }
 
-        // 簡易文字列表，讓第一次看的使用者也看得懂
-        if (listEl) {
-            listEl.innerHTML = "";
-            trend.periods.slice().reverse().forEach(function (p) {
-                var li = document.createElement("li");
-                li.className = "trend-list-item";
-                li.textContent =
-                    p.period + "：平均評分約 " + (p.avg_score != null ? p.avg_score.toFixed(1) : "?") +
-                    " 分，約 " + (p.review_count || 0) + " 則評論";
-                listEl.appendChild(li);
-            });
-        }
+        // 不再顯示「近1個月 / 3-6個月」這類分段文字描述，只保留圖表與總結
+        if (listEl) listEl.innerHTML = "";
 
         if (!canvas || typeof Chart === "undefined") return;
         if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
@@ -954,81 +915,9 @@
     }
 
     // ---------------------------------------------------------------------------
-    // Demo: pre-stored example result
-    // ---------------------------------------------------------------------------
-    var DEMO_DATA = {
-        restaurant_name: "鼎泰豐（信義店）",
-        restaurant_intro: "鼎泰豐信義店位於台北 101 購物中心地下一樓，是全球知名的小籠包專賣店。以精緻的手工小籠包聞名，每顆小籠包皮薄餡多，湯汁飽滿。除了招牌小籠包外，還提供各式蒸餃、炒飯、麵食及甜品。餐廳環境整潔明亮，開放式廚房讓客人可以欣賞師傅精湛的手藝。服務態度親切有禮，適合家庭聚餐、朋友聚會及觀光客體驗台灣美食。建議平日前往可減少等候時間，假日尖峰時段等位可能需要 30-60 分鐘。",
-        total_reviews_analyzed: 60,
-        overall_score: 8.2,
-        taste: { score: 8.5, summary: "口味方面獲得一致好評，小籠包皮薄餡多、湯汁鮮美，多位顧客表示是他們吃過最好的小籠包。炒飯粒粒分明，蝦仁口感彈牙。部分評論提到口味偏清淡，但整體品質穩定。", positive_keywords: ["皮薄餡多", "湯汁鮮美", "口感細緻", "食材新鮮"], negative_keywords: ["偏清淡"] },
-        service: { score: 8.0, summary: "服務態度普遍受到好評，服務員親切有禮、反應迅速。出餐速度快，桌面整潔度維持良好。少數時段因人潮擁擠，服務品質略有波動。", positive_keywords: ["態度親切", "出餐快速", "專業"], negative_keywords: ["尖峰時段較忙"] },
-        environment: { score: 7.5, summary: "餐廳位於 101 地下美食街，環境整潔現代。開放式廚房是一大特色，可觀賞製作過程。座位間距稍嫌擁擠，用餐尖峰時段噪音較大。", positive_keywords: ["整潔明亮", "開放式廚房", "地點便利"], negative_keywords: ["座位偏擠", "假日擁擠"] },
-        value_for_money: { score: 7.0, summary: "價格在觀光區餐廳中屬中上水準，但考量到食材品質和品牌價值，多數顧客認為物有所值。小籠包單價偏高，但份量和品質有保障。", positive_keywords: ["品質穩定", "物有所值"], negative_keywords: ["價格偏高"], price_range: "每人約 $400-800" },
-        recommended_dishes: [
-            { name: "小籠包", mentions: 45, reason: "鼎泰豐的招牌之王，18 褶的精緻工藝，皮薄如紙卻不破，一口咬下湯汁飽滿鮮甜。搭配薑絲和醋食用更添風味，幾乎每桌必點。", keywords: ["18 褶", "皮薄餡多", "湯汁飽滿", "必點"] },
-            { name: "蝦仁炒飯", mentions: 22, reason: "粒粒分明的炒飯搭配新鮮彈牙的蝦仁，鍋氣十足。調味恰到好處，不油不膩，是小籠包以外最受歡迎的單品。", keywords: ["粒粒分明", "鍋氣足", "蝦仁彈牙"] },
-            { name: "紅油抄手", mentions: 15, reason: "紅油香辣適中，餛飩皮滑餡嫩，花生碎增添口感層次。適合喜歡微辣的人，搭配小籠包組合超滿足。", keywords: ["辣度適中", "口感滑嫩", "層次豐富"] },
-            { name: "芋泥小籠包", mentions: 12, reason: "甜點版小籠包，芋泥細緻綿密，甜而不膩。外皮同樣精緻，是用餐尾聲的完美句點。", keywords: ["甜而不膩", "芋泥綿密", "創意甜點"] }
-        ],
-        not_recommended_dishes: [
-            { name: "酸辣湯", mentions: 5, reason: "多位顧客反映酸辣湯味道偏淡，缺乏層次感，與外面專賣店相比差距明顯。湯料豐富但調味不夠突出。", keywords: ["味道偏淡", "缺乏層次"] }
-        ],
-        fake_review_detection: {
-            suspected_count: 3, total_reviews: 60, percentage: 5,
-            reasons: ["觀光客打卡評論", "短評較多"], warning_level: "低度注意",
-            details: "少數評論為觀光客打卡式短評，內容較空洞但非惡意灌水，整體評論品質良好。",
-            activity_period: { start_date: "持續性", end_date: "至今", is_ongoing: true, description: "作為觀光熱點，持續有觀光客留下簡短的打卡式評論，但比例不高，不影響整體評論可信度。" }
-        },
-        food_photos: [],
-        scene_recommendations: [
-            { scene: "約會", suitable: true, description: "環境整潔有質感，適合情侶共享美食" },
-            { scene: "家庭聚餐", suitable: true, description: "菜色多元老少咸宜，有兒童餐椅" },
-            { scene: "朋友聚會", suitable: true, description: "份量選擇多，適合多人分享" },
-            { scene: "商務宴客", suitable: true, description: "品牌知名度高，宴客有面子" },
-            { scene: "一個人用餐", suitable: true, description: "單人套餐選擇多，不會尷尬" },
-            { scene: "觀光打卡", suitable: true, description: "台灣代表美食，觀光必訪" }
-        ],
-        best_visit_time: {
-            summary: "建議平日中午前往最佳，假日需提前排隊或線上登記候位",
-            recommendations: [
-                { time: "平日中午", crowding: "低", wait_time: "約10分鐘", description: "最佳用餐時段" },
-                { time: "平日晚餐", crowding: "中", wait_time: "約20-30分鐘", description: "建議17:30前到場" },
-                { time: "假日午餐", crowding: "高", wait_time: "約40-60分鐘", description: "建議使用線上候位" },
-                { time: "假日晚餐", crowding: "高", wait_time: "約40-60分鐘", description: "尖峰時段人潮最多" }
-            ]
-        },
-        rating_trend: {
-            trend: "stable", trend_label: "穩定維持",
-            summary: "鼎泰豐信義店評價長期穩定在高水準，近期無明顯波動，品質一致獲得好評。",
-            periods: [
-                { period: "近1個月", avg_score: 4.3, review_count: 18 },
-                { period: "1-3個月前", avg_score: 4.2, review_count: 22 },
-                { period: "3-6個月前", avg_score: 4.1, review_count: 12 },
-                { period: "6個月以上", avg_score: 4.0, review_count: 8 }
-            ]
-        }
-    };
-
-    function loadDemo() {
-        hide(errorSection);
-        hide(loadingSection);
-        hide(skeletonSection);
-        show(resultsSection);
-        analyzeBtn.classList.remove("loading");
-        analyzeBtn.disabled = false;
-        urlInput.value = "https://maps.app.goo.gl/demo";
-        lastAnalysisData = DEMO_DATA;
-        renderAllSections(DEMO_DATA);
-        resultsSection.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-    // ---------------------------------------------------------------------------
     // Event listeners
     // ---------------------------------------------------------------------------
     analyzeBtn.addEventListener("click", startAnalysis);
     urlInput.addEventListener("keydown", function (e) { if (e.key === "Enter") startAnalysis(); });
-    var demoBtn = document.getElementById("demoBtn");
-    if (demoBtn) demoBtn.addEventListener("click", loadDemo);
 
 })();

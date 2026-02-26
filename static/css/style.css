@@ -51,94 +51,7 @@
     --transition: 0.25s ease;
 }
 
-/* ---------- Dark Mode ---------- */
-[data-theme="dark"] {
-    --bg-primary: #0b0a09;
-    --bg-white: #15110e;
-    --bg-hover: #1d1813;
-    --bg-input: #15110e;
-    --text-primary: #f4eee6;
-    --text-secondary: #b1a79a;
-    --text-muted: #7a7267;
-    --text-link: #d2aa64;
-    --border: rgba(244,238,230,0.22);
-    --border-light: rgba(244,238,230,0.12);
-    --divider: rgba(244,238,230,0.06);
-    --shadow-sm: 0 18px 40px rgba(0,0,0,0.65);
-    --shadow: 0 26px 60px rgba(0,0,0,0.75);
-    --shadow-lg: 0 32px 80px rgba(0,0,0,0.85);
-    --shadow-hover: 0 30px 70px rgba(0,0,0,0.9);
-    --gm-blue-bg: rgba(244,238,230,0.06);
-    --gm-red-bg: rgba(148,27,20,0.35);
-    --gm-yellow-bg: rgba(210,170,100,0.30);
-    --gm-green-bg: rgba(46,125,74,0.30);
-}
-
-[data-theme="dark"] .highlight {
-    color: #8ab4f8;
-    -webkit-text-fill-color: #8ab4f8;
-}
-
-[data-theme="dark"] .restaurant-name {
-    color: var(--text-primary);
-    -webkit-text-fill-color: var(--text-primary);
-}
-
-[data-theme="dark"] .fake-card.level-low {
-    background: rgba(253,214,99,0.1);
-    border-color: rgba(253,214,99,0.3);
-}
-
-[data-theme="dark"] .fake-card.level-high {
-    background: rgba(242,139,130,0.1);
-    border-color: rgba(242,139,130,0.3);
-}
-
-[data-theme="dark"] .fake-stat-value {
-    color: #fdd663;
-}
-
-[data-theme="dark"] .level-high .fake-stat-value {
-    color: #f28b82;
-}
-
-[data-theme="dark"] .price-range {
-    color: #fdd663;
-    background: rgba(253,214,99,0.12);
-}
-
-[data-theme="dark"] .skeleton-line,
-[data-theme="dark"] .skeleton-circle {
-    background: linear-gradient(90deg, #3c4043 25%, #4a4d51 50%, #3c4043 75%);
-    background-size: 200% 100%;
-}
-
-[data-theme="dark"] .lightbox-close {
-    background: rgba(255,255,255,0.2);
-}
-
-.dark-mode-toggle {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: var(--bg-white);
-    border: 1px solid var(--border);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 1.2rem;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all var(--transition);
-    z-index: 10;
-}
-
-.dark-mode-toggle:hover {
-    box-shadow: var(--shadow);
-    background: var(--bg-hover);
-}
+/* （深色模式已移除） */
 
 html {
     scroll-behavior: smooth;
@@ -660,7 +573,7 @@ body {
 
 /* ---------- Section: Combined Overview + Dimensions ---------- */
 .section-overview-dims {
-    padding: 24px 0;
+    padding: 16px 0;
 }
 
 .section-title {
@@ -675,13 +588,13 @@ body {
 .overview-grid {
     display: flex;
     align-items: center;
-    gap: 32px;
+    gap: 24px;
     justify-content: center;
     flex-wrap: wrap;
     background: var(--bg-white);
     border: 1px solid var(--border-light);
     border-radius: var(--radius-lg);
-    padding: 24px;
+    padding: 18px;
     box-shadow: var(--shadow-sm);
 }
 
@@ -699,12 +612,12 @@ body {
 
 .metric-card {
     background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(244,236,223,0.9));
-    border-radius: 18px;
-    padding: 18px 20px;
+    border-radius: 14px;
+    padding: 12px 14px;
     text-align: center;
     border: 1px solid rgba(23,18,15,0.12);
     transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
-    min-width: 110px;
+    min-width: 86px;
 }
 
 .metric-card:hover {
@@ -724,12 +637,12 @@ body {
 }
 
 .metric-icon {
-    font-size: 1.1rem;
-    margin-bottom: 6px;
+    font-size: 0.82rem;
+    margin-bottom: 4px;
 }
 
 .metric-score {
-    font-size: 1.45rem;
+    font-size: 1.25rem;
     font-weight: 700;
 }
 
@@ -1824,14 +1737,6 @@ body {
     .action-buttons {
         flex-direction: column;
         align-items: center;
-    }
-
-    .dark-mode-toggle {
-        top: 10px;
-        right: 10px;
-        width: 36px;
-        height: 36px;
-        font-size: 1rem;
     }
 }
 
