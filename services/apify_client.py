@@ -19,6 +19,17 @@ APIFY_PLACES_ACTOR_ID = os.getenv(
 )
 
 
+def _get_apify_token() -> str:
+    """
+    取得目前的 Apify Token。
+
+    注意：`app.py` 會在載入本模組 *之後* 才呼叫 `load_dotenv()`，
+    因此這裡不能只依賴模組載入時的 `APIFY_TOKEN` 常數，
+    必須在每次呼叫時再從環境變數補抓一次，避免永遠是空字串。
+    """
+    return APIFY_TOKEN or os.getenv("APIFY_TOKEN", "")
+
+
 def _apify_run_actor(actor_id: str, payload: Dict[str, Any], timeout: int = 300):
     """共用的 Apify actor 呼叫 helper。
 
@@ -26,14 +37,15 @@ def _apify_run_actor(actor_id: str, payload: Dict[str, Any], timeout: int = 300)
     - 自動帶入 APIFY_TOKEN
     - 處理 list / {items: [...]} 兩種回傳格式
     """
-    if not APIFY_TOKEN:
+    token = _get_apify_token()
+    if not token:
         # 統一在呼叫端處理「沒有 token」的情況，因此這裡直接 raise 讓上層捕捉。
         raise RuntimeError("APIFY_TOKEN not set")
 
     url = f"https://api.apify.com/v2/acts/{actor_id}/run-sync-get-dataset-items"
     resp = requests.post(
         url,
-        params={"token": APIFY_TOKEN},
+        params={"token": token},
         json=payload,
         timeout=timeout,
     )
@@ -58,7 +70,7 @@ def scrape_reviews(
     若未設定 APIFY_TOKEN，為了讓整體服務仍可啟動，這裡會回傳空陣列，
     上層會把「沒有評論」當成正常情況處理。
     """
-    if not APIFY_TOKEN:
+    if not _get_apify_token():
         # 不直接 raise，避免整個 Flask app 無法啟動
         print("[apify_client] Warning: APIFY_TOKEN not set, returning empty reviews list.")
         return []
@@ -95,7 +107,7 @@ def search_places_by_text(
       ...
     ]
     """
-    if not APIFY_TOKEN:
+    if not _get_apify_token():
         raise RuntimeError("APIFY_TOKEN not set")
 
     # Apify 官方文件使用的欄位名稱為 searchQueries，這裡僅搜尋單一關鍵字。
