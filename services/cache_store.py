@@ -5,9 +5,17 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-# SQLite DB 位置：專案根目錄下 data/analysis_cache.db
+# SQLite DB 位置：
+# - 一般本機 / 傳統伺服器：專案根目錄下 data/analysis_cache.db
+# - Vercel 等 Serverless 平台：必須使用可寫入的暫存目錄（例如 /tmp），
+#   否則會因唯讀檔案系統導致 Serverless Function 啟動時就直接 500。
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DEFAULT_DB_PATH = os.path.join(BASE_DIR, "data", "analysis_cache.db")
+
+# 在 Vercel 環境（或任何設定了 VERCEL / VERCEL_ENV 的環境）時改用 /tmp
+if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
+    DEFAULT_DB_PATH = os.path.join("/tmp", "analysis_cache.db")
+else:
+    DEFAULT_DB_PATH = os.path.join(BASE_DIR, "data", "analysis_cache.db")
 
 # 7 天 TTL（秒）
 CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
