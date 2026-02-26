@@ -27,6 +27,11 @@
     var radarChartInstance = null;
     var trendChartInstance = null;
 
+    // Input mode: 'url' (default) or 'name'
+    var inputMode = "url";
+    var inputModeButtons = document.querySelectorAll(".input-mode-btn");
+    var inputHint = document.getElementById("inputHint");
+
     // ---------------------------------------------------------------------------
     // Search History (localStorage)
     // ---------------------------------------------------------------------------
@@ -56,7 +61,6 @@
             section.style.display = "none";
             return;
         }
-        section.style.display = "block";
         container.innerHTML = "";
         history.forEach(function (h) {
             var tag = document.createElement("button");
@@ -81,6 +85,24 @@
     }
     renderHistory();
 
+    // History dropdown behavior: only show when input is focused, like Google search
+    function showHistoryDropdown() {
+        var section = document.getElementById("historySection");
+        if (!section) return;
+        var history = getHistory();
+        if (!history.length) {
+            section.style.display = "none";
+            return;
+        }
+        section.style.display = "block";
+    }
+
+    function hideHistoryDropdown() {
+        var section = document.getElementById("historySection");
+        if (!section) return;
+        section.style.display = "none";
+    }
+
     // ---------------------------------------------------------------------------
     // Model toggle
     // ---------------------------------------------------------------------------
@@ -97,9 +119,10 @@
     // URL validation (client-side)
     // ---------------------------------------------------------------------------
     const URL_PATTERNS = [
-        // 僅支援使用者指定的兩種格式
+        // 支援：餐廳頁面、Google Maps 短網址與搜尋頁面
         /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps\/place\//i,
         /https?:\/\/maps\.app\.goo\.gl\//i,
+        /https?:\/\/(www\.)?google\.(com|com\.\w{2})\/maps\/search\//i,
     ];
 
     function isValidUrl(url) {
@@ -134,6 +157,7 @@
         analyzeBtn.disabled = false;
         urlInput.value = "";
         urlInput.focus();
+        hideHistoryDropdown();
     };
 
     window.retryAnalysis = function () {
@@ -340,7 +364,11 @@
     function renderFakeWarning(detection) {
         if (!detection) return;
         var pct = detection.percentage || 0;
-        if (pct <= 0 && detection.suspected_count <= 0) return;
+        // 使用者要求：灌水比例低於 10% 就不要顯示提醒
+        if (pct < 10 || (pct <= 0 && detection.suspected_count <= 0)) {
+            hide(document.getElementById("fakeReviewSection"));
+            return;
+        }
 
         var section = document.getElementById("fakeReviewSection");
         var card = document.getElementById("fakeCard");
@@ -832,16 +860,24 @@
     // Main analysis flow
     // ---------------------------------------------------------------------------
     function startAnalysis() {
-        var url = urlInput.value.trim();
-        if (!url) {
+        var raw = urlInput.value.trim();
+        if (!raw) {
             urlInput.focus();
             urlInput.style.borderColor = "#ea4335";
             setTimeout(function () { urlInput.style.borderColor = ""; }, 1500);
             return;
         }
-        if (!isValidUrl(url)) {
-            showError("網址格式不正確, 請貼上 Google Maps 餐廳連結.");
-            return;
+
+        var url = raw;
+        if (inputMode === "name") {
+            // 使用店名搜尋：轉成 Google Maps 搜尋網址
+            var encoded = encodeURIComponent(raw);
+            url = "https://www.google.com/maps/search/" + encoded;
+        } else {
+            if (!isValidUrl(url)) {
+                showError("網址格式不正確, 請貼上 Google Maps 餐廳連結.");
+                return;
+            }
         }
 
         lastAnalyzedUrl = url;
@@ -919,5 +955,41 @@
     // ---------------------------------------------------------------------------
     analyzeBtn.addEventListener("click", startAnalysis);
     urlInput.addEventListener("keydown", function (e) { if (e.key === "Enter") startAnalysis(); });
+
+    // History dropdown show/hide, like Google search suggestions
+    urlInput.addEventListener("focus", function () {
+        showHistoryDropdown();
+    });
+    urlInput.addEventListener("blur", function () {
+        // 延遲收合，讓點擊歷史紀錄按鈕有時間觸發
+        setTimeout(hideHistoryDropdown, 180);
+    });
+
+    // Input mode toggle (URL vs Name)
+    if (inputModeButtons && inputModeButtons.length) {
+        inputModeButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var mode = btn.getAttribute("data-mode") || "url";
+                inputMode = mode;
+                inputModeButtons.forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+
+                if (mode === "name") {
+                    urlInput.placeholder = "輸入餐廳名稱或關鍵字，例如「鼎泰豐 信義」";
+                    if (inputHint) {
+                        inputHint.textContent = "用店名找餐廳：會用 Google Maps 搜尋，幫你挑出最符合的一間再做評論分析。";
+                    }
+                } else {
+                    urlInput.placeholder = "貼上 Google Maps 餐廳連結...";
+                    if (inputHint) {
+                        inputHint.textContent = "支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...";
+                    }
+                }
+
+                urlInput.value = "";
+                urlInput.focus();
+            });
+        });
+    }
 
 })();

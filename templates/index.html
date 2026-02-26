@@ -59,6 +59,14 @@
                 <span class="btn-loader" aria-hidden="true"></span>
             </button>
         </div>
+        <div class="input-mode-toggle">
+            <button class="input-mode-btn active" data-mode="url" id="modeUrl">
+                貼上連結
+            </button>
+            <button class="input-mode-btn" data-mode="name" id="modeName">
+                用店名找餐廳
+            </button>
+        </div>
         <div class="model-toggle">
             <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
                 快速模式
@@ -67,7 +75,7 @@
                 完整模式
             </button>
         </div>
-        <p class="input-hint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
+        <p class="input-hint" id="inputHint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
     </div>
 </header>
 
@@ -416,7 +424,7 @@
                 <span class="fake-badge" id="fakeBadge">整體正常</span>
             </div>
             <p class="fake-intro">
-                我們會根據評論內容與時間分佈，協助你快速判斷此餐廳的評論是否有明顯灌水或不自然的情形。
+                    根據評論內容與時間分佈，整理出疑似灌水或不自然評論的比例與重點，僅供你快速參考判斷。
             </p>
             <div class="fake-stats">
                 <div class="fake-stat">

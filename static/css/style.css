@@ -272,6 +272,48 @@ body {
     margin-top: 12px;
 }
 
+/* ---------- Input Mode Toggle (URL vs Name) ---------- */
+.input-mode-toggle {
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    margin-top: 10px;
+    border: 1px solid rgba(23,18,15,0.14);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    max-width: 260px;
+    margin-left: auto;
+    margin-right: auto;
+    background: rgba(249,246,240,0.9);
+}
+
+.input-mode-btn {
+    flex: 1;
+    padding: 6px 12px;
+    background: transparent;
+    color: var(--text-secondary);
+    border: none;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.input-mode-btn:first-child {
+    border-right: 1px solid var(--border-light);
+}
+
+.input-mode-btn:hover {
+    background: rgba(23,18,15,0.03);
+}
+
+.input-mode-btn.active {
+    background: #17120f;
+    color: #f9f6f0;
+}
+
 /* ---------- Demo Button ---------- */
 .btn-demo {
     display: inline-block;
@@ -809,15 +851,17 @@ body {
 
 /* ---------- Fake Review Warning ---------- */
 .section-fake {
-    padding: 16px 0 0;
+    padding: 8px 0 0;
 }
 
 .fake-card {
-    border-radius: var(--radius);
-    padding: 18px 20px;
-    box-shadow: var(--shadow-sm);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    box-shadow: 0 10px 24px rgba(15,10,5,0.10);
     background: var(--bg-white);
     border: 1px solid var(--border-light);
+    max-width: 520px;
+    margin: 0 auto 8px;
 }
 
 .fake-card.level-low {
@@ -832,7 +876,7 @@ body {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
 }
 
@@ -865,8 +909,8 @@ body {
 
 .fake-stats {
     display: flex;
-    gap: 20px;
-    margin-bottom: 10px;
+    gap: 14px;
+    margin-bottom: 4px;
     flex-wrap: wrap;
 }
 
@@ -1213,6 +1257,12 @@ body {
     align-items: center;
     justify-content: center;
     line-height: 1;
+}
+
+/* Hard-hide any legacy theme toggle if still present */
+.theme-toggle,
+#themeToggle {
+    display: none !important;
 }
 
 /* ---------- Download / Actions ---------- */
