@@ -1,22 +1,28 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Maps 餐廳評論 AI 分析器</title>
-    <meta name="description" content="貼入 Google Maps 餐廳連結, AI 自動分析評論, 推薦菜色一目了然">
+    <title>食神｜Google Maps 餐廳評論洞察儀表板</title>
+    <meta name="description" content="食神：以高質感的儀表板整理 Google Maps 餐廳評論，一鍵貼上店家連結，即刻閱讀口味、服務、環境與 CP 值的整體輪廓。">
     <meta name="theme-color" content="#ffffff">
 
-    <!-- PWA -->
-    <link rel="manifest" href="/manifest.json?v=20260228">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽️</text></svg>">
+    <!-- Basic Icons -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%2317120f'/><text x='50' y='62' font-size='52' text-anchor='middle' fill='%23f5f1e8' font-family='sans-serif'>食</text></svg>">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=Noto+Serif+TC:wght@500;700;900&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="/static/css/style.css?v=20260228">
+
+    <!-- Open Graph / Social -->
+    <meta property="og:title" content="食神｜Google Maps 餐廳評論洞察儀表板">
+    <meta property="og:description" content="貼上餐廳的 Google Maps 連結，食神幫你讀完所有評論，整理成一目了然的評論分析報告。">
+    <meta property="og:type" content="website">
+    <meta property="og:image" content="/static/icons/icon-512.png">
+    <meta property="og:locale" content="zh_TW">
 
     <!-- Critical inline styles as fallback while CSS loads -->
     <style>
@@ -27,17 +33,16 @@
 <body>
 
 <!-- Dark Mode Toggle -->
-<button id="darkModeToggle" class="dark-mode-toggle" title="切換深色模式">🌙</button>
+<button id="darkModeToggle" class="dark-mode-toggle" title="切換深色模式">暗</button>
 
 <!-- ====== HERO / INPUT ====== -->
 <header class="hero">
     <div class="hero-bg"></div>
     <div class="container">
         <h1 class="hero-title">
-            <span class="icon-plate">🍽️</span>
-            Google Maps 餐廳評論<br><span class="highlight">AI 分析器</span>
+            <span class="product-name">食神</span>
+            <span class="hero-title-sub">Google Maps 餐廳評論洞察儀表板</span>
         </h1>
-        <p class="hero-subtitle">貼上 Google Maps 餐廳連結, AI 幫你深度分析所有評論</p>
 
         <!-- Search History -->
         <div id="historySection" class="history-section" style="display:none;">
@@ -59,14 +64,14 @@
         </div>
         <div class="model-toggle">
             <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
-                ⚡ 快速模式
+                快速模式
             </button>
             <button class="model-btn" data-model="gemini-3-pro-preview" id="modelPro">
-                🧠 完整模式
+                完整模式
             </button>
         </div>
-        <p class="input-hint">支援格式: google.com/maps/place/... 或 maps.app.goo.gl/... 短連結</p>
-        <button id="demoBtn" class="btn-demo" type="button">📍 試試範例：鼎泰豐信義店</button>
+        <p class="input-hint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/... 短連結</p>
+        <button id="demoBtn" class="btn-demo" type="button">試試範例：鼎泰豐信義店</button>
     </div>
 </header>
 
@@ -146,12 +151,12 @@
 <section id="errorSection" class="hidden">
     <div class="container">
         <div class="error-card">
-            <span class="error-icon">😥</span>
+            <span class="error-icon">!</span>
             <h2 id="errorTitle">分析失敗</h2>
             <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
             <div class="error-actions">
-                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">🔄 重新分析</button>
-                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">↩ 返回重新輸入</button>
+                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">重新分析</button>
+                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">返回重新輸入</button>
             </div>
         </div>
     </div>
@@ -172,7 +177,7 @@
             </div>
 
             <div class="intro-card">
-                <h3 class="intro-title">📖 餐廳完整介紹</h3>
+                <h3 class="intro-title">餐廳概況</h3>
                 <p class="intro-text" id="restaurantIntro"></p>
             </div>
         </div>
@@ -181,28 +186,28 @@
     <!-- SECTION 2: Dimensions -->
     <section class="section-overview-dims">
         <div class="container">
-            <h2 class="section-title">📊 各項評分</h2>
+            <h2 class="section-title">評分總覽</h2>
 
             <!-- Top: 4 metric cards -->
             <div class="overview-grid">
                 <div class="metrics-grid metrics-grid-full">
                     <div class="metric-card" data-color="coral">
-                        <div class="metric-icon">🍜</div>
+                        <div class="metric-icon">味</div>
                         <div class="metric-score" id="tasteScore">0</div>
                         <div class="metric-label">口味</div>
                     </div>
                     <div class="metric-card" data-color="gold">
-                        <div class="metric-icon">🙋</div>
+                        <div class="metric-icon">服</div>
                         <div class="metric-score" id="serviceScore">0</div>
                         <div class="metric-label">服務</div>
                     </div>
                     <div class="metric-card" data-color="mint">
-                        <div class="metric-icon">🏠</div>
+                        <div class="metric-icon">環</div>
                         <div class="metric-score" id="envScore">0</div>
                         <div class="metric-label">環境</div>
                     </div>
                     <div class="metric-card" data-color="violet">
-                        <div class="metric-icon">💰</div>
+                        <div class="metric-icon">值</div>
                         <div class="metric-score" id="cpScore">0</div>
                         <div class="metric-label">CP值</div>
                     </div>
@@ -212,10 +217,10 @@
             <!-- Bottom: dimension detail tabs -->
             <div class="dims-detail">
                 <div class="tabs">
-                    <button class="tab active" data-tab="taste">🍜 口味</button>
-                    <button class="tab" data-tab="service">🙋 服務</button>
-                    <button class="tab" data-tab="environment">🏠 環境</button>
-                    <button class="tab" data-tab="value">💰 CP值</button>
+                    <button class="tab active" data-tab="taste">口味</button>
+                    <button class="tab" data-tab="service">服務</button>
+                    <button class="tab" data-tab="environment">環境</button>
+                    <button class="tab" data-tab="value">CP值</button>
                 </div>
 
                 <div class="tab-content active" id="tab-taste">
@@ -270,88 +275,74 @@
         </div>
     </section>
 
-    <!-- SECTION 3: Fake Review Warning -->
-    <section id="fakeReviewSection" class="section-fake hidden">
-        <div class="container">
-            <div class="fake-card" id="fakeCard">
-                <div class="fake-header">
-                    <span class="fake-icon">⚠️</span>
-                    <h3>灌水評論警示</h3>
-                    <span class="fake-badge" id="fakeBadge">中度注意</span>
-                </div>
-                <div class="fake-stats">
-                    <div class="fake-stat">
-                        <span class="fake-stat-value" id="fakeCount">0</span>
-                        <span class="fake-stat-label">疑似灌水</span>
-                    </div>
-                    <div class="fake-stat">
-                        <span class="fake-stat-value" id="fakePercent">0%</span>
-                        <span class="fake-stat-label">佔比</span>
-                    </div>
-                    <div class="fake-stat">
-                        <span class="fake-stat-value" id="fakeTotal">0</span>
-                        <span class="fake-stat-label">總評論</span>
-                    </div>
-                </div>
-                <div class="fake-reasons" id="fakeReasons"></div>
-                <p class="fake-details" id="fakeDetails"></p>
-                <!-- Activity Timeline -->
-                <div class="fake-timeline" id="fakeTimeline"></div>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 4: Recommended Dishes -->
+    <!-- SECTION 3: Recommended Dishes -->
     <section class="section-dishes">
         <div class="container">
-            <h2 class="section-title">👍 推薦菜色</h2>
+            <h2 class="section-title">推薦菜色</h2>
             <div class="dishes-list" id="recommendedDishes"></div>
         </div>
     </section>
 
-    <!-- SECTION 5: Food Photo Gallery -->
+    <!-- SECTION 4: Food Photo Gallery -->
     <section id="foodPhotoSection" class="section-photos hidden">
         <div class="container">
-            <h2 class="section-title">📸 食物照片</h2>
+            <h2 class="section-title">食物照片</h2>
             <div class="photo-gallery" id="photoGallery"></div>
         </div>
     </section>
 
-    <!-- SECTION 6: Not Recommended Dishes -->
+    <!-- SECTION 5: Not Recommended Dishes -->
     <section class="section-dishes bad">
         <div class="container">
-            <h2 class="section-title">👎 不推薦菜色</h2>
+            <h2 class="section-title">不推薦菜色</h2>
             <div class="dishes-list" id="notRecommendedDishes"></div>
         </div>
     </section>
 
-    <!-- SECTION 7: Scene Recommendations -->
-    <section id="sceneSection" class="section-scene" style="display:none;">
-        <div class="container">
-            <h2 class="section-title">🎯 適合場景</h2>
-            <div id="sceneGrid" class="scene-grid"></div>
-        </div>
-    </section>
-
-    <!-- SECTION 8: Best Visit Time -->
-    <section id="visitTimeSection" class="section-visit-time" style="display:none;">
-        <div class="container">
-            <h2 class="section-title">⏰ 最佳造訪時段</h2>
-            <p id="visitTimeSummary" class="visit-summary"></p>
-            <div id="visitTimeGrid" class="visit-time-grid"></div>
-        </div>
-    </section>
-
-    <!-- SECTION 9: Rating Trend -->
+    <!-- SECTION 6: Rating Trend -->
     <section id="trendSection" class="section-trend" style="display:none;">
         <div class="container">
             <div class="trend-card">
                 <div class="trend-header">
-                    <h2 class="section-title">📈 評價趨勢</h2>
+                    <h2 class="section-title">評價趨勢</h2>
                     <span id="trendBadge" class="trend-badge">穩定</span>
                 </div>
                 <p id="trendSummary" class="trend-summary"></p>
+                <ul id="trendList" class="trend-list"></ul>
                 <canvas id="trendChart" height="200"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION 7: Advanced Analysis (collapsible) -->
+    <section class="section-advanced">
+        <div class="container">
+            <button
+                id="advancedToggleBtn"
+                class="advanced-toggle"
+                type="button"
+                onclick="toggleAdvanced()"
+            >
+                展開進階分析：評論異常、場合建議、造訪時段
+            </button>
+            <div id="advancedContent" class="advanced-content hidden">
+                <!-- Scene Recommendations -->
+                <section id="sceneSection" class="section-scene" style="display:none;">
+                    <div class="container">
+                        <h2 class="section-title">用餐場合建議</h2>
+                        <div id="sceneGrid" class="scene-grid"></div>
+                    </div>
+                </section>
+
+                <!-- Best Visit Time -->
+                <section id="visitTimeSection" class="section-visit-time" style="display:none;">
+                    <div class="container">
+                        <h2 class="section-title">最佳造訪時段</h2>
+                        <p id="visitTimeSummary" class="visit-summary"></p>
+                        <div id="visitTimeGrid" class="visit-time-grid"></div>
+                    </div>
+                </section>
+
             </div>
         </div>
     </section>
@@ -361,13 +352,13 @@
         <div class="container">
             <div class="action-buttons">
                 <button class="btn-download" id="downloadBtn" onclick="downloadReport()">
-                    📸 下載報告圖片
+                    下載報告圖片
                 </button>
                 <button class="btn-pdf" id="pdfBtn" onclick="downloadPDF()">
-                    📄 下載 PDF 報告
+                    下載 PDF 報告
                 </button>
                 <button class="btn-share" id="copyBtn" onclick="copySummary()">
-                    📋 複製分析摘要
+                    複製分析摘要
                 </button>
             </div>
             <div class="social-share">
@@ -392,10 +383,70 @@
     <img class="lightbox-img" id="lightboxImg" alt="食物照片" src="">
 </div>
 
+<!-- About / Legal -->
+<section class="section-about">
+    <div class="container about-grid">
+        <div class="about-block">
+            <h3 class="about-title">關於「食神」</h3>
+            <p class="about-text">
+                食神是一款為美食愛好者、饕客與餐廳經營者打造的評論分析工具，
+                自動整理 Google Maps 上的真實顧客回饋，協助你看懂口味、服務、環境與 CP 值等關鍵重點。
+            </p>
+        </div>
+        <div class="about-block">
+            <h3 class="about-title">資料與隱私</h3>
+            <p class="about-text">
+                本服務僅即時讀取並分析你提供之公開 Google Maps 評論，不會額外儲存個人身分資料。
+                分析結果僅供參考，實際體驗仍以餐廳現場為準。
+            </p>
+        </div>
+        <div class="about-block">
+            <h3 class="about-title">免責聲明</h3>
+            <p class="about-text">
+                「食神」與 Google LLC 無任何關聯或商業合作關係。
+                Google Maps 與相關標誌為其商標或註冊商標，僅作為資料來源描述之用。
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- Review Authenticity / Suspicious Reviews (placed at the very end) -->
+<section id="fakeReviewSection" class="section-fake hidden">
+    <div class="container">
+        <div class="fake-card" id="fakeCard">
+            <div class="fake-header">
+                <span class="fake-icon">!</span>
+                <h3>評論可信度總結</h3>
+                <span class="fake-badge" id="fakeBadge">整體正常</span>
+            </div>
+            <p class="fake-intro">
+                我們會根據評論內容與時間分佈，協助你快速判斷此餐廳的評論是否有明顯灌水或不自然的情形。
+            </p>
+            <div class="fake-stats">
+                <div class="fake-stat">
+                    <span class="fake-stat-label">疑似不自然評論數</span>
+                    <span class="fake-stat-value" id="fakeCount">0</span>
+                </div>
+                <div class="fake-stat">
+                    <span class="fake-stat-label">在全部評論中的比例</span>
+                    <span class="fake-stat-value" id="fakePercent">0%</span>
+                </div>
+                <div class="fake-stat">
+                    <span class="fake-stat-label">總評論數</span>
+                    <span class="fake-stat-value" id="fakeTotal">0</span>
+                </div>
+            </div>
+            <div class="fake-reasons" id="fakeReasons"></div>
+            <p class="fake-details" id="fakeDetails"></p>
+            <div class="fake-timeline" id="fakeTimeline"></div>
+        </div>
+    </div>
+</section>
+
 <!-- Footer -->
 <footer class="footer">
     <div class="container">
-        <p>Google Maps 餐廳評論 AI 分析器 &copy; 2025</p>
+        <p>食神｜Google Maps 餐廳評論洞察儀表板 &copy; 2025</p>
         <p class="footer-sub">Powered by Apify &middot; Gemini AI</p>
     </div>
 </footer>
@@ -404,13 +455,29 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
 <script>
-if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function (registrations) {
-        registrations.forEach(function (registration) {
-            registration.unregister();
-        });
-    }).catch(function () {});
-}
+// Dev-mode safety: if a legacy Service Worker is still registered from previous PWA experiments,
+// it may serve stale cached HTML/CSS/JS and block you from seeing latest changes.
+// This tries to unregister SW + clear Cache Storage once, then reload.
+(async function () {
+    if (!("serviceWorker" in navigator)) return;
+    const onceKey = "sw_cleanup_done_v20260228";
+    try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        for (const reg of regs) {
+            try { await reg.unregister(); } catch (e) { /* ignore */ }
+        }
+        if (window.caches && caches.keys) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        if (!sessionStorage.getItem(onceKey)) {
+            sessionStorage.setItem(onceKey, "1");
+            setTimeout(function () { window.location.reload(); }, 120);
+        }
+    } catch (e) {
+        // ignore
+    }
+})();
 </script>
 <script src="/static/js/app.js?v=20260228"></script>
 </body>

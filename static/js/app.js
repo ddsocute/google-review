@@ -35,7 +35,7 @@
         var btn = document.getElementById("darkModeToggle");
         if (saved === "true") {
             document.documentElement.setAttribute("data-theme", "dark");
-            if (btn) btn.textContent = "☀️";
+            if (btn) btn.textContent = "亮";
         }
         if (btn) {
             btn.addEventListener("click", function () {
@@ -43,11 +43,11 @@
                 if (isDark) {
                     document.documentElement.removeAttribute("data-theme");
                     localStorage.setItem("darkMode", "false");
-                    btn.textContent = "🌙";
+                    btn.textContent = "暗";
                 } else {
                     document.documentElement.setAttribute("data-theme", "dark");
                     localStorage.setItem("darkMode", "true");
-                    btn.textContent = "☀️";
+                    btn.textContent = "亮";
                 }
             });
         }
@@ -99,7 +99,7 @@
         // Add clear button
         var clearBtn = document.createElement("button");
         clearBtn.className = "history-tag history-clear";
-        clearBtn.textContent = "✕ 清除";
+        clearBtn.textContent = "清除紀錄";
         clearBtn.addEventListener("click", function () {
             localStorage.removeItem(HISTORY_KEY);
             renderHistory();
@@ -183,16 +183,12 @@
 
         var title = document.getElementById("errorTitle");
         if (msg.includes("逾時")) {
-            document.querySelector(".error-icon").textContent = "⏰";
             title.textContent = "分析逾時";
         } else if (msg.includes("額度")) {
-            document.querySelector(".error-icon").textContent = "💳";
             title.textContent = "額度不足";
         } else if (msg.includes("找到") || msg.includes("沒有")) {
-            document.querySelector(".error-icon").textContent = "🔍";
             title.textContent = "找不到評論";
         } else {
-            document.querySelector(".error-icon").textContent = "😥";
             title.textContent = "分析失敗";
         }
 
@@ -385,7 +381,7 @@
             card.className = "fake-card level-low";
         }
 
-        document.getElementById("fakeBadge").textContent = detection.warning_level || "注意";
+        document.getElementById("fakeBadge").textContent = detection.warning_level || "整體正常";
         document.getElementById("fakeCount").textContent = detection.suspected_count || 0;
         document.getElementById("fakePercent").textContent = (detection.percentage || 0) + "%";
         document.getElementById("fakeTotal").textContent = detection.total_reviews || 0;
@@ -409,7 +405,7 @@
             tl.className = "timeline-box";
             var tlTitle = document.createElement("div");
             tlTitle.className = "timeline-title";
-            tlTitle.innerHTML = "📅 活動時間軸";
+            tlTitle.textContent = "時間分佈（灌水 / 不自然評論大多出現在什麼時候）";
             tl.appendChild(tlTitle);
 
             var tlRow = document.createElement("div");
@@ -418,26 +414,18 @@
             startBlock.className = "timeline-item";
             startBlock.innerHTML =
                 '<span class="tl-dot start"></span>' +
-                '<span class="tl-label">開始</span>' +
+                '<span class="tl-label">開始時間</span>' +
                 '<span class="tl-date">' + (ap.start_date || "不明") + '</span>';
             tlRow.appendChild(startBlock);
-            var arrow = document.createElement("div");
-            arrow.className = "timeline-arrow";
-            arrow.innerHTML = "→";
-            tlRow.appendChild(arrow);
+
             var endBlock = document.createElement("div");
             endBlock.className = "timeline-item";
             endBlock.innerHTML =
                 '<span class="tl-dot ' + (ap.is_ongoing ? "ongoing" : "end") + '"></span>' +
-                '<span class="tl-label">' + (ap.is_ongoing ? "進行中" : "結束") + '</span>' +
+                '<span class="tl-label">' + (ap.is_ongoing ? "目前仍在持續" : "已經結束") + '</span>' +
                 '<span class="tl-date">' + (ap.end_date || "不明") + '</span>';
             tlRow.appendChild(endBlock);
             tl.appendChild(tlRow);
-
-            var statusBadge = document.createElement("div");
-            statusBadge.className = "timeline-status " + (ap.is_ongoing ? "status-ongoing" : "status-ended");
-            statusBadge.textContent = ap.is_ongoing ? "🔴 目前仍在進行中" : "✅ 活動已結束";
-            tl.appendChild(statusBadge);
 
             if (ap.description) {
                 var desc = document.createElement("p");
@@ -461,7 +449,7 @@
         nameRow.className = "dish-name-row";
         var nameEl = document.createElement("span");
         nameEl.className = "dish-name";
-        nameEl.textContent = (isGood ? "👍 " : "👎 ") + dish.name;
+        nameEl.textContent = dish.name;
         nameRow.appendChild(nameEl);
         if (dish.mentions) {
             var badge = document.createElement("span");
@@ -538,15 +526,13 @@
         if (!scenes || !scenes.length) { if (section) section.style.display = "none"; return; }
         section.style.display = "block";
         grid.innerHTML = "";
-        var icons = { "約會": "💑", "家庭聚餐": "👨‍👩‍👧‍👦", "朋友聚會": "🎉", "商務宴客": "💼", "一個人用餐": "🧑", "觀光打卡": "📸" };
+        var icons = { };
         scenes.forEach(function (s) {
             var card = document.createElement("div");
             card.className = "scene-card " + (s.suitable ? "scene-yes" : "scene-no");
-            var icon = icons[s.scene] || "🍴";
             card.innerHTML =
-                '<div class="scene-icon">' + icon + '</div>' +
                 '<div class="scene-name">' + s.scene + '</div>' +
-                '<div class="scene-badge">' + (s.suitable ? "✓ 適合" : "✗ 不適合") + '</div>' +
+                '<div class="scene-badge">' + (s.suitable ? "適合" : "不適合") + '</div>' +
                 '<div class="scene-desc">' + (s.description || "") + '</div>';
             grid.appendChild(card);
         });
@@ -564,14 +550,13 @@
         if (summary) summary.textContent = visitData.summary || "";
         grid.innerHTML = "";
         var crowdColors = { "低": "crowd-low", "中": "crowd-mid", "高": "crowd-high" };
-        var crowdIcons = { "低": "🟢", "中": "🟡", "高": "🔴" };
         visitData.recommendations.forEach(function (r) {
             var card = document.createElement("div");
             card.className = "visit-card " + (crowdColors[r.crowding] || "crowd-mid");
             card.innerHTML =
                 '<div class="visit-time-label">' + (r.time || "") + '</div>' +
-                '<div class="visit-crowd">' + (crowdIcons[r.crowding] || "🟡") + ' 人潮' + (r.crowding || "中") + '</div>' +
-                '<div class="visit-wait">⏱️ ' + (r.wait_time || "不確定") + '</div>' +
+                '<div class="visit-crowd">人潮' + (r.crowding || "中") + '</div>' +
+                '<div class="visit-wait">預估等待時間：' + (r.wait_time || "不確定") + '</div>' +
                 '<div class="visit-desc">' + (r.description || "") + '</div>';
             grid.appendChild(card);
         });
@@ -584,6 +569,7 @@
         var section = document.getElementById("trendSection");
         var badge = document.getElementById("trendBadge");
         var summaryEl = document.getElementById("trendSummary");
+        var listEl = document.getElementById("trendList");
         var canvas = document.getElementById("trendChart");
         if (!trend || !trend.periods || !trend.periods.length) {
             if (section) section.style.display = "none";
@@ -591,17 +577,32 @@
         }
         section.style.display = "block";
         if (badge) {
-            badge.textContent = trend.trend_label || "穩定";
+            badge.textContent = trend.trend_label || "最近走勢穩定";
             badge.className = "trend-badge trend-" + (trend.trend || "stable");
         }
-        if (summaryEl) summaryEl.textContent = trend.summary || "";
+        if (summaryEl) {
+            var sum = trend.summary || "";
+            summaryEl.textContent = sum ? "總結來說：" + sum : "";
+        }
+
+        // 簡易文字列表，讓第一次看的使用者也看得懂
+        if (listEl) {
+            listEl.innerHTML = "";
+            trend.periods.slice().reverse().forEach(function (p) {
+                var li = document.createElement("li");
+                li.className = "trend-list-item";
+                li.textContent =
+                    p.period + "：平均評分約 " + (p.avg_score != null ? p.avg_score.toFixed(1) : "?") +
+                    " 分，約 " + (p.review_count || 0) + " 則評論";
+                listEl.appendChild(li);
+            });
+        }
 
         if (!canvas || typeof Chart === "undefined") return;
         if (trendChartInstance) { trendChartInstance.destroy(); trendChartInstance = null; }
 
         var labels = trend.periods.map(function (p) { return p.period; }).reverse();
         var scores = trend.periods.map(function (p) { return p.avg_score; }).reverse();
-        var counts = trend.periods.map(function (p) { return p.review_count; }).reverse();
         var isDark = document.documentElement.getAttribute("data-theme") === "dark";
 
         trendChartInstance = new Chart(canvas, {
@@ -612,62 +613,35 @@
                     {
                         label: "平均評分",
                         data: scores,
-                        borderColor: "#1a73e8",
-                        backgroundColor: "rgba(26,115,232,0.1)",
+                        borderColor: "#17120f",
+                        backgroundColor: "rgba(23,18,15,0.12)",
                         borderWidth: 3,
-                        pointBackgroundColor: "#1a73e8",
-                        pointBorderColor: isDark ? "#303134" : "#fff",
+                        pointBackgroundColor: "#17120f",
+                        pointBorderColor: isDark ? "#15110e" : "#f9f6f0",
                         pointBorderWidth: 2,
-                        pointRadius: 6,
+                        pointRadius: 5,
                         fill: true,
-                        tension: 0.3,
-                        yAxisID: "y",
-                    },
-                    {
-                        label: "評論數",
-                        data: counts,
-                        borderColor: "#34a853",
-                        backgroundColor: "rgba(52,168,83,0.08)",
-                        borderWidth: 2,
-                        pointBackgroundColor: "#34a853",
-                        pointRadius: 4,
-                        borderDash: [5, 5],
-                        fill: false,
-                        tension: 0.3,
-                        yAxisID: "y1",
+                        tension: 0.25
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                interaction: { mode: "index", intersect: false },
                 plugins: {
-                    legend: {
-                        labels: { color: isDark ? "#e8eaed" : "#202124", font: { family: "'Noto Sans TC', sans-serif" } }
-                    }
+                    legend: { display: false }
                 },
                 scales: {
                     x: {
-                        ticks: { color: isDark ? "#9aa0a6" : "#5f6368" },
-                        grid: { color: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
+                        ticks: { color: isDark ? "#b1a79a" : "#7a7267" },
+                        grid: { color: isDark ? "rgba(244,238,230,0.06)" : "rgba(0,0,0,0.04)" }
                     },
                     y: {
-                        type: "linear",
-                        position: "left",
-                        min: 1, max: 5,
-                        ticks: { stepSize: 0.5, color: isDark ? "#9aa0a6" : "#5f6368" },
-                        grid: { color: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)" },
-                        title: { display: true, text: "平均評分", color: isDark ? "#9aa0a6" : "#5f6368" },
-                    },
-                    y1: {
-                        type: "linear",
-                        position: "right",
-                        min: 0,
-                        ticks: { color: isDark ? "#9aa0a6" : "#5f6368" },
-                        grid: { drawOnChartArea: false },
-                        title: { display: true, text: "評論數", color: isDark ? "#9aa0a6" : "#5f6368" },
-                    },
+                        min: 1,
+                        max: 5,
+                        ticks: { stepSize: 0.5, color: isDark ? "#b1a79a" : "#7a7267" },
+                        grid: { color: isDark ? "rgba(244,238,230,0.06)" : "rgba(0,0,0,0.04)" }
+                    }
                 }
             }
         });
@@ -691,6 +665,25 @@
     };
 
     // ---------------------------------------------------------------------------
+    // Advanced analysis toggle
+    // ---------------------------------------------------------------------------
+    window.toggleAdvanced = function () {
+        var content = document.getElementById("advancedContent");
+        var btn = document.getElementById("advancedToggleBtn");
+        if (!content || !btn) return;
+        var isHidden = content.classList.contains("hidden");
+        if (isHidden) {
+            content.classList.remove("hidden");
+            btn.classList.add("advanced-toggle-open");
+            btn.textContent = "🔍 收合進階分析";
+        } else {
+            content.classList.add("hidden");
+            btn.classList.remove("advanced-toggle-open");
+            btn.textContent = "🔍 展開進階分析（評論異常、場合建議、造訪時段）";
+        }
+    };
+
+    // ---------------------------------------------------------------------------
     // Tabs
     // ---------------------------------------------------------------------------
     document.querySelectorAll(".tab").forEach(function (tab) {
@@ -709,27 +702,27 @@
     window.copySummary = function () {
         if (!lastAnalysisData) return;
         var d = lastAnalysisData;
-        var text = "🍽️ " + (d.restaurant_name || "餐廳") + " - AI 評論分析\n\n";
-        text += "⭐ 總評分：" + (d.overall_score || "N/A") + "/10\n";
-        text += "🍜 口味：" + (d.taste ? d.taste.score : "?") + " | ";
-        text += "🙋 服務：" + (d.service ? d.service.score : "?") + " | ";
-        text += "🏠 環境：" + (d.environment ? d.environment.score : "?") + " | ";
-        text += "💰 CP值：" + (d.value_for_money ? d.value_for_money.score : "?") + "\n\n";
+        var text = "食神｜" + (d.restaurant_name || "餐廳") + " - Google Maps 評論分析報告\n\n";
+        text += "總評分：" + (d.overall_score || "N/A") + "/10\n";
+        text += "口味：" + (d.taste ? d.taste.score : "?") + " | ";
+        text += "服務：" + (d.service ? d.service.score : "?") + " | ";
+        text += "環境：" + (d.environment ? d.environment.score : "?") + " | ";
+        text += "CP值：" + (d.value_for_money ? d.value_for_money.score : "?") + "\n\n";
         if (d.recommended_dishes && d.recommended_dishes.length) {
-            text += "👍 推薦：" + d.recommended_dishes.map(function (dd) { return dd.name; }).join("、") + "\n";
+            text += "推薦菜色：" + d.recommended_dishes.map(function (dd) { return dd.name; }).join("、") + "\n";
         }
         if (d.not_recommended_dishes && d.not_recommended_dishes.length) {
-            text += "👎 不推薦：" + d.not_recommended_dishes.map(function (dd) { return dd.name; }).join("、") + "\n";
+            text += "不推薦菜色：" + d.not_recommended_dishes.map(function (dd) { return dd.name; }).join("、") + "\n";
         }
         if (d.value_for_money && d.value_for_money.price_range) {
-            text += "💵 " + d.value_for_money.price_range + "\n";
+            text += "價格區間：" + d.value_for_money.price_range + "\n";
         }
-        text += "\n🔗 由 Google Maps 餐廳評論 AI 分析器產生";
+        text += "\n由「食神」整理（Google Maps 餐廳評論洞察報告）";
 
         navigator.clipboard.writeText(text).then(function () {
             var btn = document.getElementById("copyBtn");
-            btn.textContent = "✅ 已複製！";
-            setTimeout(function () { btn.textContent = "📋 複製分析摘要"; }, 2000);
+            btn.textContent = "已複製";
+            setTimeout(function () { btn.textContent = "複製分析摘要"; }, 2000);
         }).catch(function () {
             // Fallback
             var ta = document.createElement("textarea");
@@ -739,8 +732,8 @@
             document.execCommand("copy");
             document.body.removeChild(ta);
             var btn = document.getElementById("copyBtn");
-            btn.textContent = "✅ 已複製！";
-            setTimeout(function () { btn.textContent = "📋 複製分析摘要"; }, 2000);
+            btn.textContent = "已複製";
+            setTimeout(function () { btn.textContent = "複製分析摘要"; }, 2000);
         });
     };
 
@@ -751,7 +744,7 @@
         if (!lastAnalysisData) return;
         var name = lastAnalysisData.restaurant_name || "餐廳";
         var score = lastAnalysisData.overall_score || "?";
-        var shareText = "🍽️ " + name + " AI 評論分析 ⭐" + score + "/10 - 快來看看！";
+        var shareText = "食神｜" + name + " Google Maps 評論分析，整體評分 " + score + "/10";
         var shareUrl = window.location.href;
         var url;
         switch (platform) {
@@ -773,10 +766,10 @@
     // ---------------------------------------------------------------------------
     window.downloadReport = function () {
         var btn = document.getElementById("downloadBtn");
-        btn.textContent = "⏳ 產生圖片中...";
+        btn.textContent = "產生圖片中...";
         btn.disabled = true;
         if (typeof html2canvas === "undefined") {
-            btn.textContent = "📸 下載報告圖片";
+            btn.textContent = "下載報告圖片";
             btn.disabled = false;
             alert("圖片產生元件載入失敗，請重新整理頁面後再試");
             return;
@@ -788,13 +781,14 @@
         }).then(function (canvas) {
             var link = document.createElement("a");
             var rname = (document.getElementById("restaurantName").textContent || "分析報告").replace(/[\/\\:]/g, "_");
-            link.download = rname + "-AI分析報告.png";
+            link.download = rname + "-評論分析報告.png";
             link.href = canvas.toDataURL("image/png");
             link.click();
-            btn.textContent = "📸 下載報告圖片";
+            btn.textContent = "下載報告圖片";
             btn.disabled = false;
         }).catch(function () {
-            btn.textContent = "📸 下載報告圖片";
+            btn.textContent = "下載報告圖片";
+            btn.textContent = "下載報告圖片";
             btn.disabled = false;
             alert("圖片產生失敗，請重試");
         });
@@ -805,10 +799,10 @@
     // ---------------------------------------------------------------------------
     window.downloadPDF = function () {
         var btn = document.getElementById("pdfBtn");
-        btn.textContent = "⏳ 產生 PDF 中...";
+        btn.textContent = "產生 PDF 中...";
         btn.disabled = true;
         if (typeof html2canvas === "undefined" || typeof jspdf === "undefined") {
-            btn.textContent = "📄 下載 PDF 報告";
+            btn.textContent = "下載 PDF 報告";
             btn.disabled = false;
             alert("PDF 元件載入失敗，請重新整理頁面後再試");
             return;
@@ -847,11 +841,12 @@
                 }
             }
             var rname = (document.getElementById("restaurantName").textContent || "分析報告").replace(/[\/\\:]/g, "_");
-            pdf.save(rname + "-AI分析報告.pdf");
-            btn.textContent = "📄 下載 PDF 報告";
+            pdf.save(rname + "-評論分析報告.pdf");
+            btn.textContent = "下載 PDF 報告";
             btn.disabled = false;
         }).catch(function () {
-            btn.textContent = "📄 下載 PDF 報告";
+            btn.textContent = "下載 PDF 報告";
+            btn.textContent = "下載 PDF 報告";
             btn.disabled = false;
             alert("PDF 產生失敗，請重試");
         });
@@ -898,18 +893,16 @@
         show(loadingSection);
         show(skeletonSection);
         setStep(1);
-        setProgress(5, "正在連接 Google Maps...");
+        setProgress(10, "步驟 1 / 3：正在連接 Google Maps 並抓取評論資料（約 10–20 秒）");
 
-        var progressPercent = 5;
-        var progressInterval = setInterval(function () {
-            if (progressPercent < 25) { progressPercent += 1; setProgress(progressPercent, "正在抓取評論資料..."); }
-            else if (progressPercent < 45) { progressPercent += 0.3; setProgress(Math.round(progressPercent), "評論資料處理中..."); }
-            else if (progressPercent < 80) { progressPercent += 0.15; setProgress(Math.round(progressPercent), "AI 正在分析中，請耐心等候..."); }
-            else if (progressPercent < 95) { progressPercent += 0.05; setProgress(Math.round(progressPercent), "快完成了..."); }
-        }, 500);
-
-        var stepTimer2 = setTimeout(function () { setStep(2); setProgress(30, "AI 正在深度分析評論..."); }, 8000);
-        var stepTimer3 = setTimeout(function () { setStep(3); setProgress(70, "正在整理分析報告..."); }, 30000);
+        var stepTimer2 = setTimeout(function () {
+            setStep(2);
+            setProgress(45, "步驟 2 / 3：AI 正在閱讀評論內容與評分，時間會依評論數量略有不同");
+        }, 8000);
+        var stepTimer3 = setTimeout(function () {
+            setStep(3);
+            setProgress(75, "步驟 3 / 3：正在整理圖表與重點摘要，幫你彙整成可閱讀的報告");
+        }, 30000);
 
         var controller = new AbortController();
         var fetchTimeout = setTimeout(function () { controller.abort(); }, 300000);
@@ -924,7 +917,6 @@
                 clearTimeout(fetchTimeout);
                 clearTimeout(stepTimer2);
                 clearTimeout(stepTimer3);
-                clearInterval(progressInterval);
                 if (!res.ok) {
                     return res.json().then(function (body) {
                         throw new Error(body.error || "伺服器錯誤 (" + res.status + ")");
@@ -954,7 +946,6 @@
                 clearTimeout(fetchTimeout);
                 clearTimeout(stepTimer2);
                 clearTimeout(stepTimer3);
-                clearInterval(progressInterval);
                 var msg = err.name === "AbortError"
                     ? "分析請求逾時（超過 5 分鐘），請稍後再試或切換到快速模式"
                     : (err.message || "發生未知錯誤, 請稍後再試.");

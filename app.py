@@ -1,17 +1,26 @@
 import os
 import json
 import re
+import hashlib
 import requests
 import urllib.parse
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
+from services.cache_store import init_db, get_cached_analysis, set_cached_analysis
+from services.url_normalizer import canonicalize
+from services.apify_client import scrape_reviews as apify_scrape_reviews
+from routes.api_tasks import bp as api_tasks_bp
 
 load_dotenv()
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+
+# Initialize local cache DB and task-based API routes
+init_db()
+app.register_blueprint(api_tasks_bp)
 
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
@@ -110,30 +119,6 @@ def parse_json_from_model_content(content):
         if start != -1 and end != -1 and end > start:
             return json.loads(text[start:end + 1])
         raise
-
-
-# ---------------------------------------------------------------------------
-# Apify: scrape reviews
-# ---------------------------------------------------------------------------
-
-def scrape_reviews(google_maps_url, max_reviews=MAX_SCRAPE_REVIEWS):
-    """Call Apify actor to scrape Google Maps reviews."""
-    run_input = {
-        "startUrls": [{"url": google_maps_url}],
-        "maxReviews": max_reviews,
-        "reviewsSort": "newest",
-        "language": "zh-TW",
-        "personalData": False,
-    }
-
-    resp = requests.post(
-        "https://api.apify.com/v2/acts/compass~Google-Maps-Reviews-Scraper/run-sync-get-dataset-items",
-        params={"token": APIFY_TOKEN},
-        json=run_input,
-        timeout=300,
-    )
-    resp.raise_for_status()
-    return resp.json()
 
 
 # ---------------------------------------------------------------------------
@@ -593,14 +578,16 @@ def add_no_cache_headers(response):
     return response
 
 
-@app.route("/manifest.json")
-def manifest():
-    return send_from_directory("static", "manifest.json", mimetype="application/json")
-
-
 @app.route("/sw.js")
 def service_worker():
-    return send_from_directory("static", "sw.js", mimetype="application/javascript")
+    # PWA is currently removed.
+    # Keep /sw.js as a CLEANUP service worker to remove any previously registered SW/caches
+    # that might still control "/" and serve stale assets.
+    #
+    # IMPORTANT: allow "/" so any old root-scoped registration can update and run cleanup.
+    resp = send_from_directory("static", "sw.js", mimetype="application/javascript")
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
 
 
 @app.route("/api/analyze", methods=["POST"])
@@ -608,6 +595,8 @@ def api_analyze():
     """Main analysis endpoint."""
     body = request.get_json(force=True)
     url = (body.get("url") or "").strip()
+    model = body.get("model", "gemini-3-flash-preview")
+    mode = "deep" if model == "gemini-3-pro-preview" else "quick"
 
     if not url:
         return jsonify({"error": "請提供 Google Maps 餐廳連結"}), 400
@@ -625,9 +614,42 @@ def api_analyze():
         if not validate_google_maps_url(url):
             return jsonify({"error": "短網址解析後非有效的 Google Maps 連結，請確認連結是否正確"}), 400
 
+    # Normalize URL to canonical form + cache key
+    try:
+        norm = canonicalize(url)
+    except Exception:
+        norm = {}
+
+    canonical_url = norm.get("canonical_url") or url
+    cache_key = norm.get("cache_key")
+    if not cache_key:
+        h = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:16]
+        cache_key = f"url:{h}"
+    display_name = norm.get("display_name") or url
+
+    # --- Step 0: Check cache first ---
+    try:
+        entry = get_cached_analysis(cache_key, mode)
+    except Exception:
+        entry = None
+
+    if entry is not None:
+        result = entry.as_result_object()
+        return jsonify(result)
+
     # --- Step 1: Scrape reviews ---
     try:
-        reviews_data = scrape_reviews(url)
+        # quick 模式少抓一點評論以提高速度，deep 模式抓比較多評論
+        if mode == "deep":
+            max_reviews = MAX_SCRAPE_REVIEWS
+        else:
+            max_reviews = min(MAX_SCRAPE_REVIEWS, 60)
+
+        reviews_data = apify_scrape_reviews(
+            canonical_url,
+            max_reviews=max_reviews,
+            language="zh-TW",
+        )
     except requests.exceptions.Timeout:
         return jsonify({"error": "抓取評論逾時，可能是餐廳評論過多，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
@@ -648,7 +670,6 @@ def api_analyze():
         pass
 
     # --- Step 2: AI analysis ---
-    model = body.get("model", "gemini-3-flash-preview")
     try:
         analysis = analyse_reviews(reviews_data, model=model)
     except requests.exceptions.Timeout:
@@ -671,6 +692,19 @@ def api_analyze():
         analysis = enrich_photos(analysis, reviews_data, restaurant_name)
     except Exception:
         pass  # photos are optional, don't fail the whole request
+
+    # --- Step 4: Write to cache (best-effort) ---
+    try:
+        set_cached_analysis(
+            cache_key=cache_key,
+            mode=mode,
+            canonical_url=canonical_url,
+            display_name=display_name,
+            result_obj=analysis,
+        )
+    except Exception:
+        # 快取失敗不應影響主要回應
+        pass
 
     return jsonify(analysis)
 
