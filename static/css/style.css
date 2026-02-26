@@ -83,6 +83,14 @@ body {
     min-height: 100vh;
 }
 
+.sidebar-toggle {
+    display: none;
+}
+
+.sidebar-backdrop {
+    display: none;
+}
+
 .sidebar {
     width: 220px;
     padding: 24px 16px;
@@ -838,6 +846,13 @@ body {
     margin-top: 20px;
 }
 
+.dims-intro {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
 .tabs {
     display: flex;
     gap: 0;
@@ -1326,10 +1341,66 @@ body {
     padding: 24px 0 12px;
 }
 
-.photo-gallery {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+.photo-section-intro {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    line-height: 1.6;
+}
+
+.photo-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-light);
+    background: var(--bg-white);
+    margin-bottom: 10px;
+}
+
+.photo-tab {
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+
+.photo-tab:hover {
+    background: rgba(23,18,15,0.04);
+}
+
+.photo-tab.active {
+    background: #17120f;
+    color: #f9f6f0;
+}
+
+.photo-strip-wrapper {
+    position: relative;
+    overflow: hidden;
+}
+
+.photo-strip {
+    display: flex;
     gap: 10px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+}
+
+.photo-item {
+    flex: 0 0 auto;
+    width: 190px;
+    scroll-snap-align: start;
 }
 
 .gallery-photo {
@@ -1346,6 +1417,11 @@ body {
 .gallery-photo:hover {
     transform: scale(1.03);
     box-shadow: var(--shadow-hover);
+}
+
+.photo-empty {
+    font-size: 0.85rem;
+    color: var(--text-muted);
 }
 
 /* ---------- Photo Lightbox ---------- */
@@ -1875,33 +1951,80 @@ body {
 @media (max-width: 768px) {
     .app-layout {
         flex-direction: column;
+        padding-top: 52px;
+    }
+
+    .sidebar-toggle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        z-index: 1100;
+        padding: 6px 14px;
+        border-radius: var(--radius-full);
+        border: 1px solid var(--border-light);
+        background: rgba(249,246,240,0.96);
+        color: var(--text-primary);
+        font-size: 0.8rem;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .sidebar-backdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 1090;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--transition);
+    }
+
+    .sidebar-backdrop.active {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .sidebar {
-        width: 100%;
-        position: static;
-        border-right: none;
-        border-bottom: 1px solid var(--border-light);
+        width: 240px;
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        border-right: 1px solid var(--border-light);
+        border-bottom: none;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        padding-bottom: 12px;
+        align-items: flex-start;
+        padding-bottom: 24px;
+        padding-top: 24px;
+        box-shadow: var(--shadow);
+        transform: translateX(-100%);
+        transition: transform var(--transition);
+        z-index: 1200;
+    }
+
+    .sidebar.sidebar-open {
+        transform: translateX(0);
     }
 
     .sidebar-logo {
-        margin-bottom: 8px;
+        margin-bottom: 16px;
     }
 
     .sidebar-nav {
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 8px;
+        flex-direction: column;
+        align-items: stretch;
     }
 
     .nav-item {
-        font-size: 0.78rem;
-        padding: 6px 10px;
+        font-size: 0.8rem;
+        padding: 7px 14px;
     }
 
     .hero {

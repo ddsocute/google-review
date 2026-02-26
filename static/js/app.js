@@ -558,24 +558,110 @@
     }
 
     // ---------------------------------------------------------------------------
-    // Render: Food Photo Gallery
+    // Render: Photo Gallery (grouped by category)
     // ---------------------------------------------------------------------------
-    function renderFoodPhotos(photos) {
+    function renderFoodPhotos(photoData) {
         var section = document.getElementById("foodPhotoSection");
-        var gallery = document.getElementById("photoGallery");
-        if (!photos || photos.length === 0) { hide(section); return; }
+        var strip = document.getElementById("photoStrip");
+        var empty = document.getElementById("photoEmpty");
+        var tabs = document.querySelectorAll(".photo-tab");
+
+        if (!section || !strip) return;
+
+        if (!photoData) {
+            hide(section);
+            return;
+        }
+
+        var groups;
+        if (Array.isArray(photoData)) {
+            // Backward compatibility: old flat array -> 全部歸類到「食物」
+            groups = {
+                food: photoData,
+                environment: [],
+                menu: [],
+            };
+        } else {
+            groups = {
+                food: photoData.food || [],
+                environment: photoData.environment || [],
+                menu: photoData.menu || [],
+            };
+        }
+
+        var hasAny =
+            (groups.food && groups.food.length) ||
+            (groups.environment && groups.environment.length) ||
+            (groups.menu && groups.menu.length);
+
+        if (!hasAny) {
+            hide(section);
+            return;
+        }
+
         show(section);
-        gallery.innerHTML = "";
-        photos.forEach(function (url) {
-            var img = document.createElement("img");
-            img.className = "gallery-photo";
-            img.src = url;
-            img.alt = "食物照片";
-            img.loading = "lazy";
-            img.onerror = function () { img.style.display = "none"; };
-            img.onclick = function () { openLightbox(url); };
-            gallery.appendChild(img);
-        });
+
+        function setActiveTab(category) {
+            if (!tabs || !tabs.length) return;
+            tabs.forEach(function (tab) {
+                var cat = tab.getAttribute("data-category");
+                if (cat === category) {
+                    tab.classList.add("active");
+                } else {
+                    tab.classList.remove("active");
+                }
+            });
+        }
+
+        function renderCategory(category) {
+            var list = groups[category] || [];
+            strip.innerHTML = "";
+            if (!list.length) {
+                strip.style.display = "none";
+                if (empty) empty.style.display = "block";
+                return;
+            }
+            strip.style.display = "flex";
+            if (empty) empty.style.display = "none";
+            list.forEach(function (url) {
+                var item = document.createElement("div");
+                item.className = "photo-item";
+
+                var img = document.createElement("img");
+                img.className = "gallery-photo";
+                img.src = url;
+                img.alt = "餐廳照片";
+                img.loading = "lazy";
+                img.onerror = function () { item.style.display = "none"; };
+                img.onclick = function () { openLightbox(url); };
+
+                item.appendChild(img);
+                strip.appendChild(item);
+            });
+        }
+
+        // Decide initial active category：優先顯示有內容的
+        var activeCategory = "food";
+        if (!groups.food.length && groups.environment.length) {
+            activeCategory = "environment";
+        } else if (!groups.food.length && !groups.environment.length && groups.menu.length) {
+            activeCategory = "menu";
+        }
+
+        setActiveTab(activeCategory);
+        renderCategory(activeCategory);
+
+        // Bind tab click events once
+        if (!renderFoodPhotos._bound) {
+            tabs.forEach(function (tab) {
+                tab.addEventListener("click", function () {
+                    var cat = tab.getAttribute("data-category");
+                    setActiveTab(cat);
+                    renderCategory(cat);
+                });
+            });
+            renderFoodPhotos._bound = true;
+        }
     }
 
     // ---------------------------------------------------------------------------
@@ -893,7 +979,7 @@
         renderOverviewAndDimensions(data);
         renderFakeWarning(data.fake_review_detection);
         renderDishes(data);
-        renderFoodPhotos(data.food_photos);
+        renderFoodPhotos(data.photo_groups || data.food_photos);
         renderSceneRecommendations(data.scene_recommendations);
         renderBestVisitTime(data.best_visit_time);
         renderRatingTrend(data.rating_trend);
@@ -1077,6 +1163,44 @@
     // ---------------------------------------------------------------------------
     // Sidebar navigation
     // ---------------------------------------------------------------------------
+    var sidebar = document.querySelector(".sidebar");
+    var sidebarToggle = document.getElementById("sidebarToggle");
+    var sidebarBackdrop = document.getElementById("sidebarBackdrop");
+
+    function closeSidebar() {
+        if (sidebar) {
+            sidebar.classList.remove("sidebar-open");
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.classList.remove("active");
+        }
+        document.body.style.overflow = "";
+    }
+
+    function openSidebar() {
+        if (sidebar) {
+            sidebar.classList.add("sidebar-open");
+        }
+        if (sidebarBackdrop) {
+            sidebarBackdrop.classList.add("active");
+        }
+        document.body.style.overflow = "hidden";
+    }
+
+    if (sidebarToggle && sidebar) {
+        sidebarToggle.addEventListener("click", function () {
+            if (sidebar.classList.contains("sidebar-open")) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+    }
+
+    if (sidebarBackdrop) {
+        sidebarBackdrop.addEventListener("click", closeSidebar);
+    }
+
     var navButtons = document.querySelectorAll(".nav-item");
     var pages = {
         home: document.getElementById("page-home"),
@@ -1100,6 +1224,11 @@
                         page.classList.remove("page-active");
                     }
                 });
+
+                // Close sidebar on mobile after navigation
+                if (window.innerWidth <= 768) {
+                    closeSidebar();
+                }
             });
         });
     }

@@ -484,11 +484,73 @@ def fuzzy_match_dish(identified_name, dish_names):
     return None
 
 
+def classify_photo_category(photo_url):
+    """Classify a restaurant-related photo into one of: food, environment, menu, other.
+
+    Uses the same Vision endpoint as identify_food_in_photo, but with a simpler prompt.
+    Falls back to 'food' if vision is unavailable.
+    """
+    if not OPENAI_API_KEY:
+        return "food"
+
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "gpt-4o-mini",
+        "temperature": 0.1,
+        "max_tokens": 10,
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "你是一個圖片分類助手，負責將餐廳相關的照片分成四類："
+                    "food（以菜色、餐點為主）、environment（用餐環境或門面）、"
+                    "menu（菜單或價目表）、other（與餐廳無直接關係）。\n"
+                    "請只回傳四個英文小寫標籤之一：food, environment, menu, other。"
+                ),
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "判斷這張照片最適合的分類，只能回傳 food / environment / menu / other 其中一個。",
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": photo_url},
+                    },
+                ],
+            },
+        ],
+    }
+
+    try:
+        resp = requests.post(
+            f"{OPENAI_BASE_URL}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=12,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        label = (data["choices"][0]["message"]["content"] or "").strip().lower()
+        if label not in {"food", "environment", "menu", "other"}:
+            return "food"
+        return label
+    except Exception as e:
+        print(f"[Vision] Error classifying photo category: {e}")
+        return "food"
+
+
 def enrich_photos(analysis, reviews_data, restaurant_name=""):
-    """Collect up to 10 food photos from positive (4-5 star) reviews.
+    """Collect photos from reviews and group into categories for the gallery.
     
-    Returns a flat list of photo URLs in analysis["food_photos"].
-    No longer matches photos to individual dishes.
+    Returns:
+      - analysis["photo_groups"]: {"food": [...], "environment": [...], "menu": [...]}
+      - analysis["food_photos"]: flat list kept for向後相容（沿用第一類圖片）
     """
     review_photo_map = analysis.pop("_review_photo_map", {})
 
@@ -553,13 +615,50 @@ def enrich_photos(analysis, reviews_data, restaurant_name=""):
         else:
             other_photos.extend(valid)
 
-    # Prefer positive review photos, fill up to 10
-    food_photos = positive_photos[:10]
-    if len(food_photos) < 10:
-        food_photos.extend(other_photos[:10 - len(food_photos)])
+    # Build candidate list for categorization（最多處理 15 張，避免過多 Vision 成本）
+    max_candidates = 15
+    candidates = positive_photos[:max_candidates]
+    if len(candidates) < max_candidates:
+        candidates.extend(other_photos[: max_candidates - len(candidates)])
 
-    analysis["food_photos"] = food_photos[:10]
-    print(f"[Photos] Collected {len(analysis['food_photos'])} food photos")
+    groups = {"food": [], "environment": [], "menu": []}
+
+    for url in candidates:
+        label = classify_photo_category(url)
+        if label in groups:
+            groups[label].append(url)
+
+    # 若某些分類太少，從剩餘照片中補齊
+    def fill_group(target_key, fallback_pool, limit_per_group=8):
+        if len(groups[target_key]) >= limit_per_group:
+            return
+        for u in fallback_pool:
+            if len(groups[target_key]) >= limit_per_group:
+                break
+            if u not in groups[target_key]:
+                groups[target_key].append(u)
+
+    # 建立一個所有照片的平面清單作為補充來源
+    all_photos = list(dict.fromkeys(positive_photos + other_photos))
+
+    fill_group("food", all_photos)
+    fill_group("environment", all_photos)
+    fill_group("menu", all_photos)
+
+    # 最多各 8 張，避免畫面過滿
+    for key in list(groups.keys()):
+        groups[key] = groups[key][:8]
+
+    analysis["photo_groups"] = groups
+
+    # 維持舊欄位：以「食物」分類為主，若沒有則退回全部照片前 10 張
+    flat_photos = groups["food"] or all_photos
+    analysis["food_photos"] = flat_photos[:10]
+
+    print(
+        "[Photos] Grouped photos - food=%d, env=%d, menu=%d"
+        % (len(groups["food"]), len(groups["environment"]), len(groups["menu"]))
+    )
     return analysis
 
 

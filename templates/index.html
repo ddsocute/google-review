@@ -32,6 +32,11 @@
 </head>
 <body>
 
+<button class="sidebar-toggle" id="sidebarToggle" type="button" aria-label="切換導覽選單">
+    選單
+</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <div class="app-layout">
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
@@ -197,11 +202,6 @@
                         <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
                         <p class="review-count" id="reviewCount">已分析 0 則評論</p>
 
-                        <!-- Radar Chart -->
-                        <div class="radar-card" id="radarCard">
-                            <canvas id="radarChart" width="300" height="300"></canvas>
-                        </div>
-
                         <div class="intro-card">
                             <h3 class="intro-title">餐廳概況</h3>
                             <p class="intro-text" id="restaurantIntro"></p>
@@ -212,10 +212,13 @@
                 <!-- SECTION 2: Dimensions -->
                 <section class="section-overview-dims">
                     <div class="container">
-                        <h2 class="section-title">評分總覽</h2>
+                        <h2 class="section-title">整體評分與四大指標</h2>
 
-                        <!-- Top: 4 metric cards -->
+                        <!-- Top: Radar + 4 metric cards -->
                         <div class="overview-grid">
+                            <div class="radar-card" id="radarCard">
+                                <canvas id="radarChart" width="300" height="300"></canvas>
+                            </div>
                             <div class="metrics-grid metrics-grid-full">
                                 <div class="metric-card" data-color="coral">
                                     <div class="metric-icon">口味</div>
@@ -242,6 +245,10 @@
 
                         <!-- Bottom: dimension detail tabs -->
                         <div class="dims-detail">
+                            <p class="dims-intro">
+                                以雷達圖與四大指標（口味、服務、環境、CP 值）快速掌握餐廳整體輪廓，
+                                下方標籤則整理出每一個面向的具體優缺點與常見關鍵字。
+                            </p>
                             <div class="tabs">
                                 <button class="tab active" data-tab="taste">口味</button>
                                 <button class="tab" data-tab="service">服務</button>
@@ -312,8 +319,21 @@
                 <!-- SECTION 4: Food Photo Gallery -->
                 <section id="foodPhotoSection" class="section-photos hidden">
                     <div class="container">
-                        <h2 class="section-title">食物照片</h2>
-                        <div class="photo-gallery" id="photoGallery"></div>
+                        <h2 class="section-title">照片一覽</h2>
+                        <p class="photo-section-intro">
+                            從 Google Maps 評論與相片中擷取幾張代表性的照片，依「食物、環境、菜單」三大類幫你快速感受現場氛圍。
+                        </p>
+                        <div class="photo-tabs" id="photoTabs">
+                            <button class="photo-tab active" data-category="food">食物</button>
+                            <button class="photo-tab" data-category="environment">環境</button>
+                            <button class="photo-tab" data-category="menu">菜單</button>
+                        </div>
+                        <div class="photo-strip-wrapper">
+                            <div class="photo-strip" id="photoStrip"></div>
+                        </div>
+                        <div class="photo-empty" id="photoEmpty" style="display:none;">
+                            這個分類暫時找不到合適的照片。
+                        </div>
                     </div>
                 </section>
 
