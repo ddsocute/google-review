@@ -76,6 +76,74 @@ body {
     display: none !important;
 }
 
+/* ---------- App Layout & Sidebar ---------- */
+.app-layout {
+    display: flex;
+    align-items: stretch;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 220px;
+    padding: 24px 16px;
+    border-right: 1px solid var(--border-light);
+    background: rgba(249,246,240,0.96);
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+}
+
+.sidebar-logo {
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--text-primary);
+    margin-bottom: 18px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.nav-item {
+    padding: 7px 12px;
+    text-align: left;
+    border-radius: var(--radius-full);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.nav-item:hover {
+    background: rgba(23,18,15,0.04);
+}
+
+.nav-item.active {
+    background: #17120f;
+    color: #f9f6f0;
+    border-color: #17120f;
+}
+
+.page-container {
+    flex: 1;
+}
+
+.page {
+    display: none;
+}
+
+.page.page-active {
+    display: block;
+}
+
 /* ---------- Hero / Input ---------- */
 .hero {
     position: relative;
@@ -270,6 +338,70 @@ body {
     color: var(--text-muted);
     font-size: 0.8rem;
     margin-top: 12px;
+}
+
+/* ---------- Name-search results panel ---------- */
+.search-results {
+    margin-top: 14px;
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    text-align: left;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.search-results-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.search-results-list {
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.search-result-item {
+    width: 100%;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border: none;
+    border-top: 1px solid rgba(23,18,15,0.04);
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+}
+
+.search-result-item:hover {
+    background: var(--bg-hover);
+}
+
+.search-result-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.search-result-address {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.search-result-meta {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+.search-result-empty {
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
 }
 
 /* ---------- Input Mode Toggle (URL vs Name) ---------- */
@@ -1683,11 +1815,95 @@ body {
     line-height: 1.7;
 }
 
+/* ---------- Standalone pages ---------- */
+.page-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 32px 0 8px;
+    color: var(--text-primary);
+}
+
+.page-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 18px;
+}
+
+.sample-card {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    padding: 18px 18px 16px;
+    box-shadow: var(--shadow-sm);
+}
+
+.sample-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.sample-list {
+    padding-left: 18px;
+    margin-bottom: 10px;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.7;
+}
+
+.sample-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.about-page-block {
+    margin-top: 12px;
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-light);
+    padding: 18px 18px 14px;
+    box-shadow: var(--shadow-sm);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
 /* ============================================================
    RESPONSIVE
    ============================================================ */
 
 @media (max-width: 768px) {
+    .app-layout {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+        position: static;
+        border-right: none;
+        border-bottom: 1px solid var(--border-light);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 12px;
+    }
+
+    .sidebar-logo {
+        margin-bottom: 8px;
+    }
+
+    .sidebar-nav {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px;
+    }
+
+    .nav-item {
+        font-size: 0.78rem;
+        padding: 6px 10px;
+    }
+
     .hero {
         padding: 36px 0 28px;
     }

@@ -32,6 +32,11 @@
     var inputModeButtons = document.querySelectorAll(".input-mode-btn");
     var inputHint = document.getElementById("inputHint");
 
+    // Name-search candidates
+    var searchResultsPanel = document.getElementById("searchResultsPanel");
+    var searchResultsList = document.getElementById("searchResultsList");
+    var currentSearchResults = [];
+
     // ---------------------------------------------------------------------------
     // Search History (localStorage)
     // ---------------------------------------------------------------------------
@@ -190,6 +195,63 @@
         show(errorSection);
         analyzeBtn.classList.remove("loading");
         analyzeBtn.disabled = false;
+    }
+
+    function clearSearchResults() {
+        currentSearchResults = [];
+        if (searchResultsList) searchResultsList.innerHTML = "";
+        if (searchResultsPanel) searchResultsPanel.classList.add("hidden");
+    }
+
+    function renderSearchResults(list) {
+        if (!searchResultsPanel || !searchResultsList) return;
+        searchResultsList.innerHTML = "";
+        currentSearchResults = list || [];
+
+        if (!currentSearchResults.length) {
+            var empty = document.createElement("div");
+            empty.className = "search-result-empty";
+            empty.textContent = "找不到符合的餐廳，請試著加上地區或更完整的店名。";
+            searchResultsList.appendChild(empty);
+            searchResultsPanel.classList.remove("hidden");
+            return;
+        }
+
+        currentSearchResults.forEach(function (item, idx) {
+            var row = document.createElement("button");
+            row.type = "button";
+            row.className = "search-result-item";
+            row.addEventListener("click", function () {
+                if (item.maps_url) {
+                    runAnalyze(item.maps_url, item.name || "");
+                    clearSearchResults();
+                }
+            });
+
+            var title = document.createElement("div");
+            title.className = "search-result-title";
+            title.textContent = item.name || "未命名地點";
+
+            var addr = document.createElement("div");
+            addr.className = "search-result-address";
+            addr.textContent = item.address || "";
+
+            var meta = document.createElement("div");
+            meta.className = "search-result-meta";
+            var rating = item.rating != null ? item.rating.toFixed ? item.rating.toFixed(1) : item.rating : null;
+            var total = item.user_ratings_total;
+            var parts = [];
+            if (rating) parts.push("Google 評分 " + rating + "★");
+            if (total != null) parts.push(total + " 則評論");
+            meta.textContent = parts.join(" · ");
+
+            row.appendChild(title);
+            if (addr.textContent) row.appendChild(addr);
+            if (meta.textContent) row.appendChild(meta);
+            searchResultsList.appendChild(row);
+        });
+
+        searchResultsPanel.classList.remove("hidden");
     }
 
     // ---------------------------------------------------------------------------
@@ -654,25 +716,6 @@
     };
 
     // ---------------------------------------------------------------------------
-    // Advanced analysis toggle
-    // ---------------------------------------------------------------------------
-    window.toggleAdvanced = function () {
-        var content = document.getElementById("advancedContent");
-        var btn = document.getElementById("advancedToggleBtn");
-        if (!content || !btn) return;
-        var isHidden = content.classList.contains("hidden");
-        if (isHidden) {
-            content.classList.remove("hidden");
-            btn.classList.add("advanced-toggle-open");
-            btn.textContent = "🔍 收合進階分析";
-        } else {
-            content.classList.add("hidden");
-            btn.classList.remove("advanced-toggle-open");
-            btn.textContent = "🔍 展開進階分析（評論異常、場合建議、造訪時段）";
-        }
-    };
-
-    // ---------------------------------------------------------------------------
     // Tabs
     // ---------------------------------------------------------------------------
     document.querySelectorAll(".tab").forEach(function (tab) {
@@ -859,27 +902,7 @@
     // ---------------------------------------------------------------------------
     // Main analysis flow
     // ---------------------------------------------------------------------------
-    function startAnalysis() {
-        var raw = urlInput.value.trim();
-        if (!raw) {
-            urlInput.focus();
-            urlInput.style.borderColor = "#ea4335";
-            setTimeout(function () { urlInput.style.borderColor = ""; }, 1500);
-            return;
-        }
-
-        var url = raw;
-        if (inputMode === "name") {
-            // 使用店名搜尋：轉成 Google Maps 搜尋網址
-            var encoded = encodeURIComponent(raw);
-            url = "https://www.google.com/maps/search/" + encoded;
-        } else {
-            if (!isValidUrl(url)) {
-                showError("網址格式不正確, 請貼上 Google Maps 餐廳連結.");
-                return;
-            }
-        }
-
+    function runAnalyze(url, displayNameOverride) {
         lastAnalyzedUrl = url;
         analyzeBtn.classList.add("loading");
         analyzeBtn.disabled = true;
@@ -887,6 +910,7 @@
         hide(resultsSection);
         hide(document.getElementById("fakeReviewSection"));
         hide(document.getElementById("foodPhotoSection"));
+        clearSearchResults();
         show(loadingSection);
         show(skeletonSection);
         setStep(1);
@@ -927,7 +951,8 @@
                 setProgress(100, "分析完成！");
 
                 // Save to history
-                saveToHistory(data.restaurant_name || "未知餐廳", url);
+                var displayName = data.restaurant_name || displayNameOverride || "未知餐廳";
+                saveToHistory(displayName, url);
 
                 setTimeout(function () {
                     hide(loadingSection);
@@ -948,6 +973,62 @@
                     : (err.message || "發生未知錯誤, 請稍後再試.");
                 showError(msg);
             });
+    }
+
+    function startAnalysis() {
+        var raw = urlInput.value.trim();
+        if (!raw) {
+            urlInput.focus();
+            urlInput.style.borderColor = "#ea4335";
+            setTimeout(function () { urlInput.style.borderColor = ""; }, 1500);
+            return;
+        }
+
+        // 「用店名找餐廳」模式：先叫後端找候選，再讓使用者選哪一間
+        if (inputMode === "name") {
+            analyzeBtn.classList.add("loading");
+            analyzeBtn.disabled = true;
+            hide(errorSection);
+            hide(resultsSection);
+            hide(loadingSection);
+            hide(skeletonSection);
+
+            clearSearchResults();
+
+            fetch("/api/search_places", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ query: raw, limit: 6 }),
+            })
+                .then(function (res) {
+                    if (!res.ok) {
+                        return res.json().then(function (body) {
+                            throw new Error(body.error || "搜尋餐廳失敗，請稍後再試");
+                        });
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    analyzeBtn.classList.remove("loading");
+                    analyzeBtn.disabled = false;
+                    renderSearchResults(data.results || []);
+                })
+                .catch(function (err) {
+                    analyzeBtn.classList.remove("loading");
+                    analyzeBtn.disabled = false;
+                    showError(err.message || "搜尋餐廳失敗，請稍後再試");
+                });
+            return;
+        }
+
+        // URL 模式：直接檢查格式後送出分析
+        var url = raw;
+        if (!isValidUrl(url)) {
+            showError("網址格式不正確, 請貼上 Google Maps 餐廳連結.");
+            return;
+        }
+
+        runAnalyze(url);
     }
 
     // ---------------------------------------------------------------------------
@@ -988,6 +1069,37 @@
 
                 urlInput.value = "";
                 urlInput.focus();
+                clearSearchResults();
+            });
+        });
+    }
+
+    // ---------------------------------------------------------------------------
+    // Sidebar navigation
+    // ---------------------------------------------------------------------------
+    var navButtons = document.querySelectorAll(".nav-item");
+    var pages = {
+        home: document.getElementById("page-home"),
+        sample: document.getElementById("page-sample"),
+        about: document.getElementById("page-about"),
+        legal: document.getElementById("page-legal"),
+    };
+
+    if (navButtons && navButtons.length) {
+        navButtons.forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                var target = btn.getAttribute("data-page");
+                navButtons.forEach(function (b) { b.classList.remove("active"); });
+                btn.classList.add("active");
+                Object.keys(pages).forEach(function (key) {
+                    var page = pages[key];
+                    if (!page) return;
+                    if (key === target) {
+                        page.classList.add("page-active");
+                    } else {
+                        page.classList.remove("page-active");
+                    }
+                });
             });
         });
     }

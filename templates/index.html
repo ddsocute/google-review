@@ -32,420 +32,488 @@
 </head>
 <body>
 
-<!-- ====== HERO / INPUT ====== -->
-<header class="hero">
-    <div class="hero-bg"></div>
-    <div class="container">
-        <h1 class="hero-title">
-            <span class="product-name">食神</span>
-            <span class="hero-title-sub">Google Maps 餐廳評論洞察儀表板</span>
-        </h1>
+<div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">食神</div>
+        <nav class="sidebar-nav">
+            <button class="nav-item active" data-page="home">首頁</button>
+            <button class="nav-item" data-page="sample">範例報告</button>
+            <button class="nav-item" data-page="about">關於</button>
+            <button class="nav-item" data-page="legal">資料與免責聲明</button>
+        </nav>
+    </aside>
 
-        <!-- Search History -->
-        <div id="historySection" class="history-section" style="display:none;">
-            <div id="historyTags" class="history-tags"></div>
-        </div>
+    <div class="page-container">
+        <!-- ========= PAGE: HOME ========= -->
+        <section id="page-home" class="page page-active">
 
-        <div class="input-group">
-            <input
-                type="url"
-                id="urlInput"
-                class="url-input"
-                placeholder="貼上 Google Maps 餐廳連結..."
-                autocomplete="off"
-            >
-            <button id="analyzeBtn" class="btn-analyze" type="button">
-                <span class="btn-text">開始分析</span>
-                <span class="btn-loader" aria-hidden="true"></span>
-            </button>
-        </div>
-        <div class="input-mode-toggle">
-            <button class="input-mode-btn active" data-mode="url" id="modeUrl">
-                貼上連結
-            </button>
-            <button class="input-mode-btn" data-mode="name" id="modeName">
-                用店名找餐廳
-            </button>
-        </div>
-        <div class="model-toggle">
-            <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
-                快速模式
-            </button>
-            <button class="model-btn" data-model="gemini-3-pro-preview" id="modelPro">
-                完整模式
-            </button>
-        </div>
-        <p class="input-hint" id="inputHint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
-    </div>
-</header>
+            <!-- ====== HERO / INPUT ====== -->
+            <header class="hero">
+                <div class="hero-bg"></div>
+                <div class="container">
+                    <h1 class="hero-title">
+                        <span class="product-name">食神</span>
+                        <span class="hero-title-sub">Google Maps 餐廳評論洞察儀表板</span>
+                    </h1>
 
-<!-- ====== LOADING ====== -->
-<section id="loadingSection" class="loading-section hidden">
-    <div class="container">
-        <div class="loading-card">
-            <div class="loading-steps">
-                <div class="loading-progress-bar">
-                    <div class="loading-progress-fill" id="loadingProgressFill"></div>
-                </div>
-                <p class="loading-progress-text" id="loadingProgressText">準備中...</p>
-                <div class="step" id="step1">
-                    <div class="step-icon">
-                        <div class="spinner"></div>
+                    <!-- Search History -->
+                    <div id="historySection" class="history-section" style="display:none;">
+                        <div id="historyTags" class="history-tags"></div>
                     </div>
-                    <div class="step-info">
-                        <p class="step-title" id="step1Title">正在抓取評論...</p>
-                        <p class="step-desc" id="step1Desc">連接 Google Maps 取得餐廳評論資料</p>
+
+                    <div class="input-group">
+                        <input
+                            type="url"
+                            id="urlInput"
+                            class="url-input"
+                            placeholder="貼上 Google Maps 餐廳連結..."
+                            autocomplete="off"
+                        >
+                        <button id="analyzeBtn" class="btn-analyze" type="button">
+                            <span class="btn-text">開始分析</span>
+                            <span class="btn-loader" aria-hidden="true"></span>
+                        </button>
                     </div>
-                </div>
-                <div class="step" id="step2">
-                    <div class="step-icon">
-                        <div class="spinner"></div>
+                    <div class="input-mode-toggle">
+                        <button class="input-mode-btn active" data-mode="url" id="modeUrl">
+                            貼上連結
+                        </button>
+                        <button class="input-mode-btn" data-mode="name" id="modeName">
+                            用店名找餐廳
+                        </button>
                     </div>
-                    <div class="step-info">
-                        <p class="step-title" id="step2Title">AI 深度分析中...</p>
-                        <p class="step-desc" id="step2Desc">使用 Gemini AI 進行多維度評論分析</p>
+                    <div class="model-toggle">
+                        <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
+                            快速模式
+                        </button>
+                        <button class="model-btn" data-model="gemini-3-pro-preview" id="modelPro">
+                            完整模式
+                        </button>
+                    </div>
+                    <p class="input-hint" id="inputHint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
+
+                    <!-- Name-search results (only used in 用店名找餐廳 模式) -->
+                    <div id="searchResultsPanel" class="search-results hidden">
+                        <div class="search-results-header">請選擇你要分析的餐廳：</div>
+                        <div id="searchResultsList" class="search-results-list"></div>
                     </div>
                 </div>
-                <div class="step" id="step3">
-                    <div class="step-icon">
-                        <div class="spinner"></div>
-                    </div>
-                    <div class="step-info">
-                        <p class="step-title" id="step3Title">產生分析報告...</p>
-                        <p class="step-desc" id="step3Desc">整理結果並收集菜品照片</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
+            </header>
 
-<!-- ====== SKELETON LOADING ====== -->
-<section id="skeletonSection" class="hidden">
-    <div class="container">
-        <div class="skeleton-card">
-            <div class="skeleton-line w60"></div>
-            <div class="skeleton-line w40"></div>
-            <div class="skeleton-circle"></div>
-            <div class="skeleton-line w80"></div>
-            <div class="skeleton-line w50"></div>
-        </div>
-        <div class="skeleton-row">
-            <div class="skeleton-card small">
-                <div class="skeleton-line w60"></div>
-                <div class="skeleton-line w40"></div>
-            </div>
-            <div class="skeleton-card small">
-                <div class="skeleton-line w60"></div>
-                <div class="skeleton-line w40"></div>
-            </div>
-            <div class="skeleton-card small">
-                <div class="skeleton-line w60"></div>
-                <div class="skeleton-line w40"></div>
-            </div>
-            <div class="skeleton-card small">
-                <div class="skeleton-line w60"></div>
-                <div class="skeleton-line w40"></div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ====== ERROR ====== -->
-<section id="errorSection" class="hidden">
-    <div class="container">
-        <div class="error-card">
-            <span class="error-icon">!</span>
-            <h2 id="errorTitle">分析失敗</h2>
-            <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
-            <div class="error-actions">
-                <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">重新分析</button>
-                <button class="btn-retry btn-retry-secondary" onclick="resetUI()">返回重新輸入</button>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- ====== RESULTS ====== -->
-<main id="resultsSection" class="hidden">
-
-    <!-- SECTION 1: Restaurant Intro -->
-    <section class="section-intro">
-        <div class="container">
-            <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
-            <p class="review-count" id="reviewCount">已分析 0 則評論</p>
-
-            <!-- Radar Chart -->
-            <div class="radar-card" id="radarCard">
-                <canvas id="radarChart" width="300" height="300"></canvas>
-            </div>
-
-            <div class="intro-card">
-                <h3 class="intro-title">餐廳概況</h3>
-                <p class="intro-text" id="restaurantIntro"></p>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 2: Dimensions -->
-    <section class="section-overview-dims">
-        <div class="container">
-            <h2 class="section-title">評分總覽</h2>
-
-            <!-- Top: 4 metric cards -->
-            <div class="overview-grid">
-                <div class="metrics-grid metrics-grid-full">
-                    <div class="metric-card" data-color="coral">
-                        <div class="metric-icon">口味</div>
-                        <div class="metric-score" id="tasteScore">0</div>
-                        <div class="metric-label">口味</div>
-                    </div>
-                    <div class="metric-card" data-color="gold">
-                        <div class="metric-icon">服務</div>
-                        <div class="metric-score" id="serviceScore">0</div>
-                        <div class="metric-label">服務</div>
-                    </div>
-                    <div class="metric-card" data-color="mint">
-                        <div class="metric-icon">環境</div>
-                        <div class="metric-score" id="envScore">0</div>
-                        <div class="metric-label">環境</div>
-                    </div>
-                    <div class="metric-card" data-color="violet">
-                        <div class="metric-icon">CP值</div>
-                        <div class="metric-score" id="cpScore">0</div>
-                        <div class="metric-label">CP值</div>
+            <!-- ====== LOADING ====== -->
+            <section id="loadingSection" class="loading-section hidden">
+                <div class="container">
+                    <div class="loading-card">
+                        <div class="loading-steps">
+                            <div class="loading-progress-bar">
+                                <div class="loading-progress-fill" id="loadingProgressFill"></div>
+                            </div>
+                            <p class="loading-progress-text" id="loadingProgressText">準備中...</p>
+                            <div class="step" id="step1">
+                                <div class="step-icon">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div class="step-info">
+                                    <p class="step-title" id="step1Title">正在抓取評論...</p>
+                                    <p class="step-desc" id="step1Desc">連接 Google Maps 取得餐廳評論資料</p>
+                                </div>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-icon">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div class="step-info">
+                                    <p class="step-title" id="step2Title">AI 深度分析中...</p>
+                                    <p class="step-desc" id="step2Desc">使用 Gemini AI 進行多維度評論分析</p>
+                                </div>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-icon">
+                                    <div class="spinner"></div>
+                                </div>
+                                <div class="step-info">
+                                    <p class="step-title" id="step3Title">產生分析報告...</p>
+                                    <p class="step-desc" id="step3Desc">整理結果並收集菜品照片</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Bottom: dimension detail tabs -->
-            <div class="dims-detail">
-                <div class="tabs">
-                    <button class="tab active" data-tab="taste">口味</button>
-                    <button class="tab" data-tab="service">服務</button>
-                    <button class="tab" data-tab="environment">環境</button>
-                    <button class="tab" data-tab="value">CP值</button>
-                </div>
-
-                <div class="tab-content active" id="tab-taste">
-                    <div class="dim-score-bar">
-                        <span class="dim-label">口味評分</span>
-                        <div class="progress-bar"><div class="progress-fill" id="tasteProgress"></div></div>
-                        <span class="dim-value" id="tasteVal">0</span>
+            <!-- ====== SKELETON LOADING ====== -->
+            <section id="skeletonSection" class="hidden">
+                <div class="container">
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w60"></div>
+                        <div class="skeleton-line w40"></div>
+                        <div class="skeleton-circle"></div>
+                        <div class="skeleton-line w80"></div>
+                        <div class="skeleton-line w50"></div>
                     </div>
-                    <p class="dim-summary" id="tasteSummary"></p>
-                    <div class="tags-group">
-                        <div class="tags-row" id="tastePositive"></div>
-                        <div class="tags-row" id="tasteNegative"></div>
-                    </div>
-                </div>
-
-                <div class="tab-content" id="tab-service">
-                    <div class="dim-score-bar">
-                        <span class="dim-label">服務評分</span>
-                        <div class="progress-bar"><div class="progress-fill" id="serviceProgress"></div></div>
-                        <span class="dim-value" id="serviceVal">0</span>
-                    </div>
-                    <p class="dim-summary" id="serviceSummary"></p>
-                    <div class="tags-group">
-                        <div class="tags-row" id="servicePositive"></div>
-                        <div class="tags-row" id="serviceNegative"></div>
+                    <div class="skeleton-row">
+                        <div class="skeleton-card small">
+                            <div class="skeleton-line w60"></div>
+                            <div class="skeleton-line w40"></div>
+                        </div>
+                        <div class="skeleton-card small">
+                            <div class="skeleton-line w60"></div>
+                            <div class="skeleton-line w40"></div>
+                        </div>
+                        <div class="skeleton-card small">
+                            <div class="skeleton-line w60"></div>
+                            <div class="skeleton-line w40"></div>
+                        </div>
+                        <div class="skeleton-card small">
+                            <div class="skeleton-line w60"></div>
+                            <div class="skeleton-line w40"></div>
+                        </div>
                     </div>
                 </div>
+            </section>
 
-                <div class="tab-content" id="tab-environment">
-                    <div class="dim-score-bar">
-                        <span class="dim-label">環境評分</span>
-                        <div class="progress-bar"><div class="progress-fill" id="envProgress"></div></div>
-                        <span class="dim-value" id="envVal">0</span>
-                    </div>
-                    <p class="dim-summary" id="envSummary"></p>
-                    <div class="tags-group">
-                        <div class="tags-row" id="envPositive"></div>
-                        <div class="tags-row" id="envNegative"></div>
+            <!-- ====== ERROR ====== -->
+            <section id="errorSection" class="hidden">
+                <div class="container">
+                    <div class="error-card">
+                        <span class="error-icon">!</span>
+                        <h2 id="errorTitle">分析失敗</h2>
+                        <p id="errorMessage">發生未知錯誤, 請稍後再試.</p>
+                        <div class="error-actions">
+                            <button class="btn-retry" id="retryBtn" onclick="retryAnalysis()">重新分析</button>
+                            <button class="btn-retry btn-retry-secondary" onclick="resetUI()">返回重新輸入</button>
+                        </div>
                     </div>
                 </div>
+            </section>
 
-                <div class="tab-content" id="tab-value">
-                    <div class="dim-score-bar">
-                        <span class="dim-label">CP值評分</span>
-                        <div class="progress-bar"><div class="progress-fill" id="valueProgress"></div></div>
-                        <span class="dim-value" id="valueVal">0</span>
-                    </div>
-                    <p class="dim-summary" id="valueSummary"></p>
-                    <p class="price-range" id="priceRange"></p>
-                </div>
-            </div>
-        </div>
-    </section>
+            <!-- ====== RESULTS ====== -->
+            <main id="resultsSection" class="hidden">
 
-    <!-- SECTION 3: Recommended Dishes -->
-    <section class="section-dishes">
-        <div class="container">
-            <h2 class="section-title">推薦菜色</h2>
-            <div class="dishes-list" id="recommendedDishes"></div>
-        </div>
-    </section>
-
-    <!-- SECTION 4: Food Photo Gallery -->
-    <section id="foodPhotoSection" class="section-photos hidden">
-        <div class="container">
-            <h2 class="section-title">食物照片</h2>
-            <div class="photo-gallery" id="photoGallery"></div>
-        </div>
-    </section>
-
-    <!-- SECTION 5: Not Recommended Dishes -->
-    <section class="section-dishes bad">
-        <div class="container">
-            <h2 class="section-title">不推薦菜色</h2>
-            <div class="dishes-list" id="notRecommendedDishes"></div>
-        </div>
-    </section>
-
-    <!-- SECTION 6: Rating Trend -->
-    <section id="trendSection" class="section-trend" style="display:none;">
-        <div class="container">
-            <div class="trend-card">
-                <div class="trend-header">
-                    <h2 class="section-title">評價趨勢</h2>
-                    <span id="trendBadge" class="trend-badge">穩定</span>
-                </div>
-                <p id="trendSummary" class="trend-summary"></p>
-                <ul id="trendList" class="trend-list"></ul>
-                <canvas id="trendChart" height="200"></canvas>
-            </div>
-        </div>
-    </section>
-
-    <!-- SECTION 7: Advanced Analysis (collapsible) -->
-    <section class="section-advanced">
-        <div class="container">
-            <button
-                id="advancedToggleBtn"
-                class="advanced-toggle"
-                type="button"
-                onclick="toggleAdvanced()"
-            >
-                展開進階分析：評論異常、場合建議、造訪時段
-            </button>
-            <div id="advancedContent" class="advanced-content hidden">
-                <!-- Scene Recommendations -->
-                <section id="sceneSection" class="section-scene" style="display:none;">
+                <!-- SECTION 1: Restaurant Intro -->
+                <section class="section-intro">
                     <div class="container">
-                        <h2 class="section-title">用餐場合建議</h2>
-                        <div id="sceneGrid" class="scene-grid"></div>
+                        <h2 class="restaurant-name" id="restaurantName">餐廳名稱</h2>
+                        <p class="review-count" id="reviewCount">已分析 0 則評論</p>
+
+                        <!-- Radar Chart -->
+                        <div class="radar-card" id="radarCard">
+                            <canvas id="radarChart" width="300" height="300"></canvas>
+                        </div>
+
+                        <div class="intro-card">
+                            <h3 class="intro-title">餐廳概況</h3>
+                            <p class="intro-text" id="restaurantIntro"></p>
+                        </div>
                     </div>
                 </section>
 
-                <!-- Best Visit Time -->
-                <section id="visitTimeSection" class="section-visit-time" style="display:none;">
+                <!-- SECTION 2: Dimensions -->
+                <section class="section-overview-dims">
                     <div class="container">
-                        <h2 class="section-title">最佳造訪時段</h2>
-                        <p id="visitTimeSummary" class="visit-summary"></p>
-                        <div id="visitTimeGrid" class="visit-time-grid"></div>
+                        <h2 class="section-title">評分總覽</h2>
+
+                        <!-- Top: 4 metric cards -->
+                        <div class="overview-grid">
+                            <div class="metrics-grid metrics-grid-full">
+                                <div class="metric-card" data-color="coral">
+                                    <div class="metric-icon">口味</div>
+                                    <div class="metric-score" id="tasteScore">0</div>
+                                    <div class="metric-label">口味</div>
+                                </div>
+                                <div class="metric-card" data-color="gold">
+                                    <div class="metric-icon">服務</div>
+                                    <div class="metric-score" id="serviceScore">0</div>
+                                    <div class="metric-label">服務</div>
+                                </div>
+                                <div class="metric-card" data-color="mint">
+                                    <div class="metric-icon">環境</div>
+                                    <div class="metric-score" id="envScore">0</div>
+                                    <div class="metric-label">環境</div>
+                                </div>
+                                <div class="metric-card" data-color="violet">
+                                    <div class="metric-icon">CP值</div>
+                                    <div class="metric-score" id="cpScore">0</div>
+                                    <div class="metric-label">CP值</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom: dimension detail tabs -->
+                        <div class="dims-detail">
+                            <div class="tabs">
+                                <button class="tab active" data-tab="taste">口味</button>
+                                <button class="tab" data-tab="service">服務</button>
+                                <button class="tab" data-tab="environment">環境</button>
+                                <button class="tab" data-tab="value">CP值</button>
+                            </div>
+
+                            <div class="tab-content active" id="tab-taste">
+                                <div class="dim-score-bar">
+                                    <span class="dim-label">口味評分</span>
+                                    <div class="progress-bar"><div class="progress-fill" id="tasteProgress"></div></div>
+                                    <span class="dim-value" id="tasteVal">0</span>
+                                </div>
+                                <p class="dim-summary" id="tasteSummary"></p>
+                                <div class="tags-group">
+                                    <div class="tags-row" id="tastePositive"></div>
+                                    <div class="tags-row" id="tasteNegative"></div>
+                                </div>
+                            </div>
+
+                            <div class="tab-content" id="tab-service">
+                                <div class="dim-score-bar">
+                                    <span class="dim-label">服務評分</span>
+                                    <div class="progress-bar"><div class="progress-fill" id="serviceProgress"></div></div>
+                                    <span class="dim-value" id="serviceVal">0</span>
+                                </div>
+                                <p class="dim-summary" id="serviceSummary"></p>
+                                <div class="tags-group">
+                                    <div class="tags-row" id="servicePositive"></div>
+                                    <div class="tags-row" id="serviceNegative"></div>
+                                </div>
+                            </div>
+
+                            <div class="tab-content" id="tab-environment">
+                                <div class="dim-score-bar">
+                                    <span class="dim-label">環境評分</span>
+                                    <div class="progress-bar"><div class="progress-fill" id="envProgress"></div></div>
+                                    <span class="dim-value" id="envVal">0</span>
+                                </div>
+                                <p class="dim-summary" id="envSummary"></p>
+                                <div class="tags-group">
+                                    <div class="tags-row" id="envPositive"></div>
+                                    <div class="tags-row" id="envNegative"></div>
+                                </div>
+                            </div>
+
+                            <div class="tab-content" id="tab-value">
+                                <div class="dim-score-bar">
+                                    <span class="dim-label">CP值評分</span>
+                                    <div class="progress-bar"><div class="progress-fill" id="valueProgress"></div></div>
+                                    <span class="dim-value" id="valueVal">0</span>
+                                </div>
+                                <p class="dim-summary" id="valueSummary"></p>
+                                <p class="price-range" id="priceRange"></p>
+                            </div>
+                        </div>
                     </div>
                 </section>
 
-            </div>
-        </div>
-    </section>
+                <!-- SECTION 3: Recommended Dishes -->
+                <section class="section-dishes">
+                    <div class="container">
+                        <h2 class="section-title">推薦菜色</h2>
+                        <div class="dishes-list" id="recommendedDishes"></div>
+                    </div>
+                </section>
 
-    <!-- Action Buttons: Download / Share -->
-    <section class="section-actions">
-        <div class="container">
-            <div class="action-buttons">
-                <button class="btn-download" id="downloadBtn" onclick="downloadReport()">
-                    下載報告圖片
-                </button>
-                <button class="btn-pdf" id="pdfBtn" onclick="downloadPDF()">
-                    下載 PDF 報告
-                </button>
-                <button class="btn-share" id="copyBtn" onclick="copySummary()">
-                    複製分析摘要
-                </button>
-            </div>
-            <div class="social-share">
-                <button class="social-btn social-line" onclick="shareTo('line')" title="分享到 LINE">
-                    LINE
-                </button>
-                <button class="social-btn social-fb" onclick="shareTo('facebook')" title="分享到 Facebook">
-                    Facebook
-                </button>
-                <button class="social-btn social-x" onclick="shareTo('x')" title="分享到 X">
-                    𝕏
-                </button>
-            </div>
-        </div>
-    </section>
+                <!-- SECTION 4: Food Photo Gallery -->
+                <section id="foodPhotoSection" class="section-photos hidden">
+                    <div class="container">
+                        <h2 class="section-title">食物照片</h2>
+                        <div class="photo-gallery" id="photoGallery"></div>
+                    </div>
+                </section>
 
-</main>
+                <!-- SECTION 5: Not Recommended Dishes -->
+                <section class="section-dishes bad">
+                    <div class="container">
+                        <h2 class="section-title">不推薦菜色</h2>
+                        <div class="dishes-list" id="notRecommendedDishes"></div>
+                    </div>
+                </section>
+
+                <!-- SECTION 6: Rating Trend -->
+                <section id="trendSection" class="section-trend" style="display:none;">
+                    <div class="container">
+                        <div class="trend-card">
+                            <div class="trend-header">
+                                <h2 class="section-title">評價趨勢</h2>
+                                <span id="trendBadge" class="trend-badge">穩定</span>
+                            </div>
+                            <p id="trendSummary" class="trend-summary"></p>
+                            <ul id="trendList" class="trend-list"></ul>
+                            <canvas id="trendChart" height="200"></canvas>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 7: Advanced Analysis (always expanded) -->
+                <section class="section-advanced">
+                    <div class="container">
+                        <div id="advancedContent" class="advanced-content">
+                            <!-- Scene Recommendations -->
+                            <section id="sceneSection" class="section-scene" style="display:none;">
+                                <div class="container">
+                                    <h2 class="section-title">用餐場合建議</h2>
+                                    <div id="sceneGrid" class="scene-grid"></div>
+                                </div>
+                            </section>
+
+                            <!-- Best Visit Time -->
+                            <section id="visitTimeSection" class="section-visit-time" style="display:none;">
+                                <div class="container">
+                                    <h2 class="section-title">最佳造訪時段</h2>
+                                    <p id="visitTimeSummary" class="visit-summary"></p>
+                                    <div id="visitTimeGrid" class="visit-time-grid"></div>
+                                </div>
+                            </section>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION 8: Review Authenticity / Suspicious Reviews -->
+                <section id="fakeReviewSection" class="section-fake hidden">
+                    <div class="container">
+                        <div class="fake-card" id="fakeCard">
+                            <div class="fake-header">
+                                <span class="fake-icon">!</span>
+                                <h3>評論可信度總結</h3>
+                                <span class="fake-badge" id="fakeBadge">整體正常</span>
+                            </div>
+                            <p class="fake-intro">
+                                    根據評論內容與時間分佈，整理出疑似灌水或不自然評論的比例與重點，僅供你快速參考判斷。
+                            </p>
+                            <div class="fake-stats">
+                                <div class="fake-stat">
+                                    <span class="fake-stat-label">疑似不自然評論數</span>
+                                    <span class="fake-stat-value" id="fakeCount">0</span>
+                                </div>
+                                <div class="fake-stat">
+                                    <span class="fake-stat-label">在全部評論中的比例</span>
+                                    <span class="fake-stat-value" id="fakePercent">0%</span>
+                                </div>
+                                <div class="fake-stat">
+                                    <span class="fake-stat-label">總評論數</span>
+                                    <span class="fake-stat-value" id="fakeTotal">0</span>
+                                </div>
+                            </div>
+                            <div class="fake-reasons" id="fakeReasons"></div>
+                            <p class="fake-details" id="fakeDetails"></p>
+                            <div class="fake-timeline" id="fakeTimeline"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Action Buttons: Download / Share -->
+                <section class="section-actions">
+                    <div class="container">
+                        <div class="action-buttons">
+                            <button class="btn-download" id="downloadBtn" onclick="downloadReport()">
+                                下載報告圖片
+                            </button>
+                            <button class="btn-pdf" id="pdfBtn" onclick="downloadPDF()">
+                                下載 PDF 報告
+                            </button>
+                            <button class="btn-share" id="copyBtn" onclick="copySummary()">
+                                複製分析摘要
+                            </button>
+                        </div>
+                        <div class="social-share">
+                            <button class="social-btn social-line" onclick="shareTo('line')" title="分享到 LINE">
+                                LINE
+                            </button>
+                            <button class="social-btn social-fb" onclick="shareTo('facebook')" title="分享到 Facebook">
+                                Facebook
+                            </button>
+                            <button class="social-btn social-x" onclick="shareTo('x')" title="分享到 X">
+                                𝕏
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
+        </section>
+
+        <!-- ========= PAGE: SAMPLE REPORT ========= -->
+        <section id="page-sample" class="page">
+            <div class="container">
+                <h2 class="page-title">範例報告</h2>
+                <p class="page-subtitle">
+                    以下是「食神」產出的評論分析報告大致長相，實際內容會依照每間餐廳的 Google Maps 評論動態生成。
+                </p>
+                <div class="sample-card">
+                    <h3 class="sample-title">示意：某某居酒屋 — 評論洞察摘要</h3>
+                    <ul class="sample-list">
+                        <li>完整餐廳介紹（約 200–350 字），整理料理風格、環境氛圍、適合場合與注意事項。</li>
+                        <li>推薦與不推薦菜色，各自挑出關鍵菜單並說明原因與常見評價關鍵字。</li>
+                        <li>四大面向評分：口味、服務、環境、CP 值，搭配雷達圖與文字說明。</li>
+                        <li>評論可信度與灌水偵測，點出「打卡送禮」或短期大量五星等異常訊號。</li>
+                        <li>適合的用餐場合與建議造訪時段，幫你快速判斷這間店適不適合現在的你。</li>
+                    </ul>
+                    <p class="sample-note">
+                        範例僅示意版面與資訊密度，實際結果會依餐廳的評論數量、分布與內容而有差異。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========= PAGE: ABOUT ========= -->
+        <section id="page-about" class="page">
+            <div class="container">
+                <h2 class="page-title">關於「食神」</h2>
+                <div class="about-page-block">
+                    <p>
+                        「食神」是一個實驗性的小工具，想把散落在 Google Maps 上的大量餐廳評論，
+                        變成一份好讀、好分享、也方便餐廳經營者自我檢視的評論摘要報告。
+                    </p>
+                    <p>
+                        你只需要貼上餐廳的 Google Maps 連結（或用店名搜尋後選擇正確店家），
+                        系統就會自動抓取公開評論，幫你整理出：
+                        口味、服務、環境、CP 值、推薦菜色、不推薦菜色、灌水風險、適合場合與最佳造訪時段等重點。
+                    </p>
+                    <p>
+                        這不是專業的評鑑機構，也不是美食指南，
+                        而是幫你在做功課前「快速讀完大家怎麼說」的一個輔助工具。
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========= PAGE: DATA & LEGAL ========= -->
+        <section id="page-legal" class="page">
+            <div class="container">
+                <h2 class="page-title">資料與免責聲明</h2>
+                <div class="about-grid">
+                    <div class="about-block">
+                        <h3 class="about-title">資料來源與使用方式</h3>
+                        <p class="about-text">
+                            本服務僅在你主動發起分析時，<strong>即時讀取</strong> 你提供之
+                            Google Maps 餐廳頁面的公開評論資料，並交由 AI 模型進行整理與統計。
+                            我們不會主動蒐集、販售或對外分享個人化身份資料。
+                        </p>
+                    </div>
+                    <div class="about-block">
+                        <h3 class="about-title">隱私與個資</h3>
+                        <p class="about-text">
+                            報告中可能會提到評論者暱稱或評論內容節錄，這些皆來自原始的公開評論。
+                            若你是評論發表者且不希望被引用，建議可於 Google Maps 上刪除或修改原始評論。
+                            本服務不會另外建立使用者帳號，也不會要求你登入 Google 帳號。
+                        </p>
+                    </div>
+                    <div class="about-block">
+                        <h3 class="about-title">免責聲明</h3>
+                        <p class="about-text">
+                            「食神」為個人開發的實驗專案，與 Google LLC 無任何關聯或商業合作關係。
+                            Google Maps 與相關標誌為其商標或註冊商標，僅作為資料來源描述之用。
+                            所有分析與評分僅供參考，實際體驗仍以餐廳現場與你個人主觀感受為準。
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 
 <!-- Photo Lightbox -->
 <div class="lightbox-overlay" id="lightboxOverlay" onclick="closeLightbox()">
     <button class="lightbox-close" onclick="closeLightbox()">&times;</button>
     <img class="lightbox-img" id="lightboxImg" alt="食物照片" src="">
 </div>
-
-<!-- About / Legal -->
-<section class="section-about">
-    <div class="container about-grid">
-        <div class="about-block">
-            <h3 class="about-title">關於「食神」</h3>
-            <p class="about-text">
-                食神是一款為美食愛好者、饕客與餐廳經營者打造的評論分析工具，
-                自動整理 Google Maps 上的真實顧客回饋，協助你看懂口味、服務、環境與 CP 值等關鍵重點。
-            </p>
-        </div>
-        <div class="about-block">
-            <h3 class="about-title">資料與隱私</h3>
-            <p class="about-text">
-                本服務僅即時讀取並分析你提供之公開 Google Maps 評論，不會額外儲存個人身分資料。
-                分析結果僅供參考，實際體驗仍以餐廳現場為準。
-            </p>
-        </div>
-        <div class="about-block">
-            <h3 class="about-title">免責聲明</h3>
-            <p class="about-text">
-                「食神」與 Google LLC 無任何關聯或商業合作關係。
-                Google Maps 與相關標誌為其商標或註冊商標，僅作為資料來源描述之用。
-            </p>
-        </div>
-    </div>
-</section>
-
-<!-- Review Authenticity / Suspicious Reviews (placed at the very end) -->
-<section id="fakeReviewSection" class="section-fake hidden">
-    <div class="container">
-        <div class="fake-card" id="fakeCard">
-            <div class="fake-header">
-                <span class="fake-icon">!</span>
-                <h3>評論可信度總結</h3>
-                <span class="fake-badge" id="fakeBadge">整體正常</span>
-            </div>
-            <p class="fake-intro">
-                    根據評論內容與時間分佈，整理出疑似灌水或不自然評論的比例與重點，僅供你快速參考判斷。
-            </p>
-            <div class="fake-stats">
-                <div class="fake-stat">
-                    <span class="fake-stat-label">疑似不自然評論數</span>
-                    <span class="fake-stat-value" id="fakeCount">0</span>
-                </div>
-                <div class="fake-stat">
-                    <span class="fake-stat-label">在全部評論中的比例</span>
-                    <span class="fake-stat-value" id="fakePercent">0%</span>
-                </div>
-                <div class="fake-stat">
-                    <span class="fake-stat-label">總評論數</span>
-                    <span class="fake-stat-value" id="fakeTotal">0</span>
-                </div>
-            </div>
-            <div class="fake-reasons" id="fakeReasons"></div>
-            <p class="fake-details" id="fakeDetails"></p>
-            <div class="fake-timeline" id="fakeTimeline"></div>
-        </div>
-    </div>
-</section>
 
 <!-- Footer -->
 <footer class="footer">

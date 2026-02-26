@@ -25,6 +25,7 @@ app.register_blueprint(api_tasks_bp)
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.viviai.cc/v1")
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
 
 MAX_SCRAPE_REVIEWS = int(os.getenv("MAX_SCRAPE_REVIEWS", "90"))
 MAX_REVIEWS_FOR_AI = int(os.getenv("MAX_REVIEWS_FOR_AI", "60"))
@@ -708,6 +709,99 @@ def api_analyze():
         pass
 
     return jsonify(analysis)
+
+
+@app.route("/api/search_places", methods=["POST"])
+def api_search_places():
+    """Search Google Maps places by text and return candidate list for user to choose.
+
+    This is used by the "用店名找餐廳" mode on the frontend to first confirm
+    the exact place before running the full review analysis.
+    """
+    body = request.get_json(force=True) or {}
+    query = (body.get("query") or "").strip()
+    try:
+        limit = int(body.get("limit") or 6)
+    except (ValueError, TypeError):
+        limit = 6
+    limit = max(1, min(limit, 10))
+
+    if not query:
+        return jsonify({"error": "請輸入餐廳名稱或關鍵字"}), 400
+
+    if not GOOGLE_PLACES_API_KEY:
+        return (
+            jsonify(
+                {
+                    "error": "伺服器尚未設定 Google Places API Key，暫時無法使用「用店名找餐廳」功能。",
+                }
+            ),
+            500,
+        )
+
+    params = {
+        "query": query,
+        "language": "zh-TW",
+        "key": GOOGLE_PLACES_API_KEY,
+        # 偏向餐飲相關地點，但仍保留彈性
+        "type": "restaurant",
+    }
+
+    try:
+        resp = requests.get(
+            "https://maps.googleapis.com/maps/api/place/textsearch/json",
+            params=params,
+            timeout=10,
+        )
+        resp.raise_for_status()
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "向 Google 搜尋餐廳逾時，請稍後再試"}), 504
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response else 0
+        return (
+            jsonify(
+                {
+                    "error": f"向 Google 搜尋餐廳時發生錯誤 (HTTP {status})，請稍後再試",
+                }
+            ),
+            502,
+        )
+    except Exception:
+        return jsonify({"error": "向 Google 搜尋餐廳時發生未知錯誤，請稍後再試"}), 502
+
+    data = resp.json() or {}
+    api_status = data.get("status")
+    if api_status not in ("OK", "ZERO_RESULTS"):
+        # 常見狀態：REQUEST_DENIED / OVER_QUERY_LIMIT / INVALID_REQUEST ...
+        message = data.get("error_message") or f"Google Places API 狀態：{api_status}"
+        return jsonify({"error": message}), 502
+
+    results = []
+    for item in (data.get("results") or [])[:limit]:
+        place_id = item.get("place_id")
+        name = item.get("name") or ""
+        address = item.get("formatted_address") or item.get("vicinity") or ""
+        rating = item.get("rating")
+        total_ratings = item.get("user_ratings_total")
+
+        if place_id:
+            maps_url = f"https://www.google.com/maps/place/?q=place_id:{place_id}"
+        else:
+            # 後備：沒有 place_id 就嘗試使用 geometry/location + query，但仍提供原始搜尋文字
+            maps_url = None
+
+        results.append(
+            {
+                "place_id": place_id,
+                "name": name,
+                "address": address,
+                "rating": rating,
+                "user_ratings_total": total_ratings,
+                "maps_url": maps_url,
+            }
+        )
+
+    return jsonify({"query": query, "results": results})
 
 
 # ---------------------------------------------------------------------------
