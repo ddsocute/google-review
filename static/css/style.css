@@ -725,9 +725,17 @@ body.sidebar-collapsed .sidebar {
     padding: 20px;
     margin-bottom: 20px;
     box-shadow: var(--shadow-sm);
-    max-width: 380px;
+    max-width: 420px;
     margin-left: auto;
     margin-right: auto;
+}
+
+.radar-card canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 360px;
+    display: block;
+    margin: 0 auto;
 }
 
 /* ---------- Section: Restaurant Intro ---------- */
@@ -809,58 +817,10 @@ body.sidebar-collapsed .sidebar {
     gap: 12px;
 }
 
+/* 雷達圖上已直接顯示各維度分數，為減少重複資訊，隱藏右側四個分數卡片。 */
+.metrics-grid,
 .metrics-grid-full {
-    grid-template-columns: repeat(4, 1fr);
-    width: 100%;
-}
-
-.metric-card {
-    background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(244,236,223,0.9));
-    border-radius: 14px;
-    padding: 12px 14px;
-    text-align: center;
-    border: 1px solid rgba(23,18,15,0.12);
-    transition: box-shadow var(--transition), transform var(--transition), border-color var(--transition);
-    min-width: 86px;
-}
-
-.metric-card:hover {
-    box-shadow: var(--shadow-hover);
-    transform: translateY(-3px);
-    border-color: rgba(182,140,72,0.45);
-}
-
-.metric-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    border-top: 2px solid rgba(182,140,72,0.45);
-    opacity: 0.8;
-    pointer-events: none;
-}
-
-.metric-icon {
-    font-size: 0.82rem;
-    margin-bottom: 4px;
-}
-
-.metric-score {
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.metric-card[data-color="coral"] .metric-score,
-.metric-card[data-color="gold"] .metric-score,
-.metric-card[data-color="mint"] .metric-score,
-.metric-card[data-color="violet"] .metric-score {
-    color: #17120f;
-}
-
-.metric-label {
-    font-size: 0.78rem;
-    color: var(--text-secondary);
-    margin-top: 2px;
+    display: none !important;
 }
 
 /* ---------- Dimensions / Tabs ---------- */
@@ -1421,13 +1381,13 @@ body.sidebar-collapsed .sidebar {
 
 .photo-item {
     flex: 0 0 auto;
-    width: 190px;
+    width: 210px;
     scroll-snap-align: start;
 }
 
 .gallery-photo {
     width: 100%;
-    height: 160px;
+    height: 180px;
     object-fit: cover;
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-light);
@@ -2095,13 +2055,16 @@ body.sidebar-collapsed .sidebar {
         height: 180px;
     }
 
-    .photo-gallery {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-        gap: 8px;
+    .photo-strip {
+        padding-bottom: 8px;
+    }
+
+    .photo-item {
+        width: 75vw;
     }
 
     .gallery-photo {
-        height: 130px;
+        height: 220px;
     }
 
     .fake-stats {
@@ -2179,13 +2142,12 @@ body.sidebar-collapsed .sidebar {
         font-size: 1.3rem;
     }
 
-    .photo-gallery {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
+    .photo-item {
+        width: 82vw;
     }
 
     .gallery-photo {
-        height: 110px;
+        height: 240px;
     }
 
     .section-title {

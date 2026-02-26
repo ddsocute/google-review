@@ -25,7 +25,8 @@ app.register_blueprint(api_tasks_bp)
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.viviai.cc/v1")
-GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY", "")
+# 「用店名找餐廳」功能也直接共用 .env 裡的 APIFY_TOKEN，避免額外設定 Google Places API Key
+GOOGLE_PLACES_API_KEY = APIFY_TOKEN
 
 MAX_SCRAPE_REVIEWS = int(os.getenv("MAX_SCRAPE_REVIEWS", "90"))
 MAX_REVIEWS_FOR_AI = int(os.getenv("MAX_REVIEWS_FOR_AI", "60"))
@@ -617,43 +618,35 @@ def enrich_photos(analysis, reviews_data, restaurant_name=""):
         else:
             other_photos.extend(valid)
 
-    # Build candidate list for categorization（最多處理 15 張，避免過多 Vision 成本）
-    max_candidates = 15
+    # Build candidate list for categorization（最多處理 18 張，避免過多 Vision 成本）
+    max_candidates = 18
     candidates = positive_photos[:max_candidates]
     if len(candidates) < max_candidates:
         candidates.extend(other_photos[: max_candidates - len(candidates)])
 
+    # 僅依 Vision 分類結果分配，不再為了「湊滿數量」而複製到其他分類，
+    # 讓「食物 / 環境 / 菜單」三個分頁的內容彼此區分，不會全部擠在食物一欄。
     groups = {"food": [], "environment": [], "menu": []}
 
+    used_urls = set()
     for url in candidates:
+        if not isinstance(url, str) or not url.startswith("http"):
+            continue
+        if url in used_urls:
+            continue
         label = classify_photo_category(url)
         if label in groups:
             groups[label].append(url)
+            used_urls.add(url)
 
-    # 若某些分類太少，從剩餘照片中補齊
-    def fill_group(target_key, fallback_pool, limit_per_group=8):
-        if len(groups[target_key]) >= limit_per_group:
-            return
-        for u in fallback_pool:
-            if len(groups[target_key]) >= limit_per_group:
-                break
-            if u not in groups[target_key]:
-                groups[target_key].append(u)
-
-    # 建立一個所有照片的平面清單作為補充來源
-    all_photos = list(dict.fromkeys(positive_photos + other_photos))
-
-    fill_group("food", all_photos)
-    fill_group("environment", all_photos)
-    fill_group("menu", all_photos)
-
-    # 最多各 8 張，避免畫面過滿
+    # 最多各 10 張，避免畫面過滿
     for key in list(groups.keys()):
-        groups[key] = groups[key][:8]
+        groups[key] = groups[key][:10]
 
     analysis["photo_groups"] = groups
 
     # 維持舊欄位：以「食物」分類為主，若沒有則退回全部照片前 10 張
+    all_photos = list(dict.fromkeys(positive_photos + other_photos))
     flat_photos = groups["food"] or all_photos
     analysis["food_photos"] = flat_photos[:10]
 
