@@ -720,8 +720,10 @@ def api_analyze():
     if not validate_google_maps_url(url):
         return jsonify({"error": "網址格式不正確，請貼上 Google Maps 餐廳連結（支援短網址）"}), 400
 
-    # Resolve short link
-    if "goo.gl" in url:
+    # Resolve short link (goo.gl / goo.gl/maps / maps.app.goo.gl)
+    # 一定要把短網址展開成實際的 /maps/place/ 連結，
+    # 才能跟「用店名找餐廳」或貼完整 Maps 連結選到的同一家店共用同一組 canonical_url / cache_key。
+    if re.search(r"(goo\.gl/|maps\.app\.goo\.gl/)", url):
         try:
             url = resolve_short_url(url)
         except Exception:
