@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
+APIFY_TOKEN = os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or ""
 MAX_SCRAPE_REVIEWS_DEFAULT = int(os.getenv("MAX_SCRAPE_REVIEWS", "90"))
 
 # 可以透過環境變數覆寫 Apify Actor ID，預設使用官方 Compass Reviews Scraper 與
@@ -23,11 +23,17 @@ def _get_apify_token() -> str:
     """
     取得目前的 Apify Token。
 
-    注意：`app.py` 會在載入本模組 *之後* 才呼叫 `load_dotenv()`，
-    因此這裡不能只依賴模組載入時的 `APIFY_TOKEN` 常數，
-    必須在每次呼叫時再從環境變數補抓一次，避免永遠是空字串。
+    注意：
+    - `app.py` 會在載入本模組 *之後* 才呼叫 `load_dotenv()`，
+      因此這裡不能只依賴模組載入時的 `APIFY_TOKEN` 常數，
+      必須在每次呼叫時再從環境變數補抓一次，避免永遠是空字串。
+    - 部分主機可能使用 `APIFY_API_TOKEN` 這個名稱，所以也一併支援。
     """
-    return APIFY_TOKEN or os.getenv("APIFY_TOKEN", "")
+    return (
+        APIFY_TOKEN
+        or os.getenv("APIFY_TOKEN", "")
+        or os.getenv("APIFY_API_TOKEN", "")
+    )
 
 
 def _apify_run_actor(actor_id: str, payload: Dict[str, Any], timeout: int = 300):

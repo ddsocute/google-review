@@ -27,7 +27,7 @@ init_db()
 init_place_db()
 app.register_blueprint(api_tasks_bp)
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
+APIFY_TOKEN = os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or ""
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.viviai.cc/v1")
 
