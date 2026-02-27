@@ -8,6 +8,7 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from services.cache_store import init_db, get_cached_analysis, set_cached_analysis
+from services.place_store import init_place_db, record_place_from_analysis, list_places
 from services.url_normalizer import canonicalize
 from services.apify_client import (
     scrape_reviews as apify_scrape_reviews,
@@ -21,8 +22,9 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
 app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 
-# Initialize local cache DB and task-based API routes
+# Initialize local cache DB, places DB and task-based API routes
 init_db()
+init_place_db()
 app.register_blueprint(api_tasks_bp)
 
 APIFY_TOKEN = os.getenv("APIFY_TOKEN", "")
@@ -802,6 +804,16 @@ def api_analyze():
     except Exception:
         # 快取失敗不應影響主要回應
         pass
+    # --- Step 5: Record into local "map" DB (best-effort) ---
+    try:
+        record_place_from_analysis(
+            canonical_url=canonical_url,
+            display_name=display_name,
+            analysis=analysis,
+        )
+    except Exception:
+        # 只是一個方便之後查詢的本地地圖資料庫，不影響主要回應
+        pass
 
     return jsonify(analysis)
 
@@ -836,6 +848,7 @@ def api_search_places():
         )
 
     try:
+        # 舊前端只需要基本清單，因此維持預設（不含經緯度）
         results = apify_search_places(query=query, limit=limit, language="zh-TW")
     except requests.exceptions.Timeout:
         return jsonify({"error": "向 Apify 搜尋餐廳逾時，請稍後再試"}), 504
@@ -857,6 +870,92 @@ def api_search_places():
         return jsonify({"error": "向 Apify 搜尋餐廳時發生未知錯誤，請稍後再試"}), 502
 
     return jsonify({"query": query, "results": results})
+
+
+@app.route("/api/my_places", methods=["GET"])
+def api_my_places():
+    """
+    Return a simple list of places that have been analysed before.
+
+    這就是你說的「自己的地圖資料庫」：每次分析餐廳時，會把資料輕量存進 SQLite，
+    之後你可以從這個 API 抓出來當自己的店家清單或地圖列表使用。
+    """
+    try:
+        limit = int(request.args.get("limit", "100"))
+    except (TypeError, ValueError):
+        limit = 100
+    limit = max(1, min(limit, 500))
+
+    items = list_places(limit=limit)
+    return jsonify({"items": items, "count": len(items)})
+
+
+@app.route("/api/map_search", methods=["POST"])
+def api_map_search():
+    """
+    Map-based search endpoint for the new React frontend.
+
+    支援：
+    - query: 以文字搜尋（例如「台北市 文山區 餐廳」或店名）
+    - limit: 回傳幾筆結果（最多 50）
+    """
+    body = request.get_json(force=True) or {}
+    query = (body.get("query") or "").strip()
+    try:
+        limit = int(body.get("limit") or 30)
+    except (ValueError, TypeError):
+        limit = 30
+    limit = max(1, min(limit, 50))
+
+    if not query:
+        return jsonify({"error": "請輸入搜尋關鍵字"}), 400
+
+    if not APIFY_TOKEN:
+        return (
+            jsonify(
+                {
+                    "error": "伺服器尚未設定 Apify API Token，暫時無法使用地圖搜尋。",
+                }
+            ),
+            500,
+        )
+
+    try:
+        items = apify_search_places(
+            query=query,
+            limit=limit,
+            language="zh-TW",
+            with_location=True,
+        )
+    except requests.exceptions.Timeout:
+        return jsonify({"error": "向 Apify 搜尋餐廳逾時，請稍後再試"}), 504
+    except requests.exceptions.HTTPError as e:
+        status = e.response.status_code if e.response else 0
+        if status == 401:
+            return jsonify({"error": "Apify API Token 已失效，請聯繫管理員"}), 502
+        if status == 429:
+            return jsonify({"error": "Apify API 額度已用完，請稍後再試或聯繫管理員"}), 429
+        return (
+            jsonify(
+                {
+                    "error": f"向 Apify 搜尋餐廳時發生錯誤 (HTTP {status})，請稍後再試",
+                }
+            ),
+            502,
+        )
+    except Exception as e:
+        return (
+            jsonify({"error": f"向 Apify 搜尋餐廳時發生未知錯誤：{str(e)[:80]}"}),
+            502,
+        )
+
+    # 新 frontend 直接拿來畫 map pins
+    return jsonify(
+        {
+            "query": query,
+            "results": items,
+        }
+    )
 
 
 # ---------------------------------------------------------------------------

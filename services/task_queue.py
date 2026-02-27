@@ -52,6 +52,7 @@ def _make_task_dict(
     canonical_url: str,
     display_name: str,
     cache_key: str,
+    force_refresh: bool,
 ) -> Dict[str, Any]:
     now = _now_ts()
     return {
@@ -65,6 +66,7 @@ def _make_task_dict(
         "display_name": display_name,
         "cache_key": cache_key,
         "final_cache_key": cache_key,
+        "force_refresh": force_refresh,
         "created_at": now,
         "updated_at": now,
         "error": None,
@@ -88,13 +90,14 @@ def _get_task_copy(task_id: str) -> Optional[Dict[str, Any]]:
         return dict(task)
 
 
-def submit_task(input_raw: str, mode: str = "quick") -> Dict[str, Any]:
+def submit_task(input_raw: str, mode: str = "quick", force_refresh: bool = False) -> Dict[str, Any]:
     """
     提交一個分析任務。
 
-    去重規則：
-      dedupe_key = f"{cache_key}:{mode}"
-      若相同 dedupe_key 的任務仍在 pending/running 且未過期，直接回傳原任務。
+    去重規則（當 force_refresh=False 時）：
+      - dedupe_key = f"{cache_key}:{mode}"
+      - 若相同 dedupe_key 的任務仍在 pending/running 且未過期，直接回傳原任務。
+    當 force_refresh=True 時，永遠建立新任務並重新抓評論＋分析，最終會覆蓋快取內容。
     """
     _cleanup_expired()
 
@@ -108,17 +111,18 @@ def submit_task(input_raw: str, mode: str = "quick") -> Dict[str, Any]:
     now = _now_ts()
 
     with _lock:
-        # 若已有同 dedupe_key 的任務且仍有效，直接回傳
-        existing_task_id = _running_by_dedupe_key.get(dedupe_key)
-        if existing_task_id:
-            existing = _tasks_by_id.get(existing_task_id)
-            if existing:
-                if now - float(existing.get("created_at", now)) <= TASK_TTL_SECONDS and existing[
-                    "status"
-                ] in {"pending", "running"}:
-                    return dict(existing)
-                # 否則視為過期 / 結束，移除映射
-                _running_by_dedupe_key.pop(dedupe_key, None)
+        if not force_refresh:
+            # 若已有同 dedupe_key 的任務且仍有效，直接回傳
+            existing_task_id = _running_by_dedupe_key.get(dedupe_key)
+            if existing_task_id:
+                existing = _tasks_by_id.get(existing_task_id)
+                if existing:
+                    if now - float(existing.get("created_at", now)) <= TASK_TTL_SECONDS and existing[
+                        "status"
+                    ] in {"pending", "running"}:
+                        return dict(existing)
+                    # 否則視為過期 / 結束，移除映射
+                    _running_by_dedupe_key.pop(dedupe_key, None)
 
         task_id = str(uuid.uuid4())
         task = _make_task_dict(
@@ -128,6 +132,7 @@ def submit_task(input_raw: str, mode: str = "quick") -> Dict[str, Any]:
             canonical_url=canonical_url,
             display_name=display_name,
             cache_key=cache_key,
+            force_refresh=force_refresh,
         )
         _tasks_by_id[task_id] = task
         _running_by_dedupe_key[dedupe_key] = task_id
@@ -172,6 +177,7 @@ def _run_worker(task_id: str) -> None:
 
     input_raw = task["input_raw"]
     mode = task["mode"]
+    force_refresh = bool(task.get("force_refresh", False))
 
     _update_task(task_id, status="running", progress=5, message="解析輸入中")
 
@@ -192,17 +198,18 @@ def _run_worker(task_id: str) -> None:
             message="檢查快取中",
         )
 
-        # 2) 先查一次 cache（初始 cache_key）
-        entry = get_cached_analysis(cache_key, mode)
-        if entry:
-            _update_task(
-                task_id,
-                status="done",
-                progress=100,
-                message="分析完成（來自初始快取）",
-                error=None,
-            )
-            return
+        # 2) 先查一次 cache（初始 cache_key），若未要求強制重新分析
+        if not force_refresh:
+            entry = get_cached_analysis(cache_key, mode)
+            if entry:
+                _update_task(
+                    task_id,
+                    status="done",
+                    progress=100,
+                    message="分析完成（來自初始快取）",
+                    error=None,
+                )
+                return
 
         # 3) 呼叫 Apify 抓評論
         _update_task(task_id, progress=20, message="抓取評論中")
@@ -256,8 +263,8 @@ def _run_worker(task_id: str) -> None:
             message="檢查升級後快取中",
         )
 
-        # 5) 若升級後 key 不同，再查一次 cache
-        if final_cache_key and final_cache_key != cache_key:
+        # 5) 若升級後 key 不同，再查一次 cache（除非要求強制重新分析）
+        if not force_refresh and final_cache_key and final_cache_key != cache_key:
             upgraded_entry = get_cached_analysis(final_cache_key, mode)
             if upgraded_entry:
                 _update_task(

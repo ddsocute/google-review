@@ -276,11 +276,48 @@
     // Render: Restaurant Intro (Section 1)
     // ---------------------------------------------------------------------------
     function renderIntro(data) {
-        document.getElementById("restaurantName").textContent = data.restaurant_name || "餐廳分析結果";
+        var name = data.restaurant_name || "餐廳分析結果";
+        var analyzedCount = data.total_reviews_analyzed || 0;
+
+        document.getElementById("restaurantName").textContent = name;
         document.getElementById("reviewCount").textContent =
-            "已分析 " + (data.total_reviews_analyzed || 0) + " 則評論";
+            "已分析 " + analyzedCount + " 則評論";
         document.getElementById("restaurantIntro").textContent =
             data.restaurant_intro || data.dining_tips || "暫無餐廳介紹資訊。";
+
+        // Update mobile Google Maps–style fake map summary
+        try {
+            var poi = document.getElementById("mobileMapPoi");
+            var nameEl = document.getElementById("mobilePoiName");
+            var metaEl = document.getElementById("mobilePoiMeta");
+            var hintEl = document.getElementById("mobileMapHint");
+            var descEl = document.getElementById("mobileSheetDesc");
+
+            if (poi && nameEl && metaEl) {
+                nameEl.textContent = name;
+
+                var rating = null;
+                if (typeof data.google_rating === "number") {
+                    rating = data.google_rating.toFixed(1) + "★";
+                } else if (data.google_rating) {
+                    rating = data.google_rating + "★";
+                }
+
+                var parts = [];
+                if (rating) parts.push("Google 評分 " + rating);
+                if (analyzedCount) parts.push("分析 " + analyzedCount + " 則評論");
+                metaEl.textContent = parts.join(" · ") || "已完成評論分析";
+
+                poi.style.display = "block";
+                if (hintEl) hintEl.style.display = "none";
+
+                if (descEl) {
+                    descEl.textContent = "你目前正在查看「" + name + "」的評論分析，向下滑即可閱讀完整圖表與重點整理。";
+                }
+            }
+        } catch (e) {
+            // 軟性失敗：即使 mobile map 區塊不存在也不影響桌機版
+        }
     }
 
     // ---------------------------------------------------------------------------

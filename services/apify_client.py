@@ -1,5 +1,5 @@
 import os
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import requests
 
@@ -90,6 +90,8 @@ def search_places_by_text(
     query: str,
     limit: int = 6,
     language: str = "zh-TW",
+    *,
+    with_location: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     使用 Apify 的 Google Maps 商家爬蟲依「店名 / 關鍵字」搜尋店家清單。
@@ -155,6 +157,19 @@ def search_places_by_text(
             or (f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else None)
         )
 
+        # optional geo fields for map view
+        lat: Optional[float] = None
+        lng: Optional[float] = None
+        # Apify actors may use different keys for coordinates; try several.
+        for lat_key in ("locationLat", "lat", "latitude"):
+            if isinstance(item.get(lat_key), (int, float)):
+                lat = float(item[lat_key])
+                break
+        for lng_key in ("locationLng", "lng", "lon", "longitude"):
+            if isinstance(item.get(lng_key), (int, float)):
+                lng = float(item[lng_key])
+                break
+
         results.append(
             {
                 "place_id": place_id,
@@ -167,6 +182,5 @@ def search_places_by_text(
         )
 
     return results
-
 
 __all__ = ["scrape_reviews", "search_places_by_text"]

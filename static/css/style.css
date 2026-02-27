@@ -370,6 +370,127 @@ body.sidebar-collapsed .sidebar {
     margin-top: 12px;
 }
 
+/* ---------- Mobile Google Maps–style shell (fake map + bottom sheet) ---------- */
+.mobile-map-shell {
+    margin-top: 16px;
+    display: none; /* mobile-first: only show on小螢幕，在媒體查詢中開啟 */
+}
+
+.mobile-map-fake {
+    position: relative;
+    border-radius: 18px;
+    overflow: hidden;
+    height: 220px;
+    background: radial-gradient(circle at 20% 0%, #e0f2fe 0, #bae6fd 18%, #f97316 18%, #f97316 19%, #e0f2fe 19%, #e0f2fe 40%, #fef3c7 60%, #fed7aa 80%, #fecaca 100%);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid rgba(23,18,15,0.12);
+}
+
+.mobile-map-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(to right, rgba(255,255,255,0.24) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,0.24) 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.mobile-map-pin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -80%);
+    width: 26px;
+    height: 26px;
+    border-radius: 50% 50% 50% 0;
+    background: #ef4444;
+    box-shadow: 0 8px 20px rgba(127,29,29,0.55);
+    transform-origin: 50% 100%;
+}
+
+.mobile-map-pin::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 999px;
+    background: #fee2e2;
+}
+
+.mobile-map-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 14px;
+    pointer-events: none;
+}
+
+.mobile-map-poi {
+    pointer-events: auto;
+    background: rgba(249,246,240,0.96);
+    border-radius: 16px;
+    padding: 10px 12px;
+    max-width: 92%;
+    box-shadow: 0 14px 40px rgba(15,10,5,0.25);
+    border: 1px solid rgba(23,18,15,0.16);
+}
+
+.mobile-map-poi-name {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 2px;
+}
+
+.mobile-map-poi-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.mobile-map-hint {
+    pointer-events: auto;
+    background: rgba(249,246,240,0.96);
+    border-radius: 16px;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    max-width: 92%;
+    box-shadow: 0 10px 28px rgba(15,10,5,0.18);
+    border: 1px dashed rgba(23,18,15,0.18);
+}
+
+.mobile-map-bottomsheet {
+    margin-top: 10px;
+    background: var(--bg-white);
+    border-radius: 18px;
+    padding: 10px 14px 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+    text-align: left;
+}
+
+.bottomsheet-handle {
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(23,18,15,0.16);
+    margin: 0 auto 8px;
+}
+
+.bottomsheet-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.bottomsheet-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
 /* ---------- Name-search results panel ---------- */
 .search-results {
     margin-top: 14px;
@@ -2011,6 +2132,11 @@ body.sidebar-collapsed .sidebar {
 
     .hero {
         padding: 36px 0 28px;
+    }
+
+    /* 小螢幕：啟用 Google Maps 風格的 map shell，營造「地圖 + 底部卡片」的感覺 */
+    .mobile-map-shell {
+        display: block;
     }
 
     .hero-title {

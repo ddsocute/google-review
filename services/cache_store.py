@@ -17,8 +17,13 @@ if os.getenv("VERCEL") or os.getenv("VERCEL_ENV"):
 else:
     DEFAULT_DB_PATH = os.path.join(BASE_DIR, "data", "analysis_cache.db")
 
-# 7 天 TTL（秒）
-CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+# 7 天 TTL（秒），可透過環境變數覆寫：
+# - CACHE_TTL_SECONDS：整體預設 TTL（秒）
+DEFAULT_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60
+try:
+    CACHE_TTL_SECONDS = int(os.getenv("CACHE_TTL_SECONDS", DEFAULT_CACHE_TTL_SECONDS))
+except (TypeError, ValueError):
+    CACHE_TTL_SECONDS = DEFAULT_CACHE_TTL_SECONDS
 
 
 @dataclass

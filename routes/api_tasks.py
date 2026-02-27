@@ -42,6 +42,30 @@ def submit():
     return jsonify(_extract_task_public_fields(task)), 200
 
 
+@bp.post("/submit/refresh")
+def submit_refresh():
+    """
+    Submit a new analysis task that forces re-analysis (bypassing cache).
+
+    用途：
+      - 後台或管理者想立刻刷新某間店的分析結果時使用。
+    """
+    data = request.get_json(silent=True) or {}
+    input_raw = (data.get("input") or "").strip()
+    mode = (data.get("mode") or "quick").strip().lower()
+
+    # Validate input
+    if not input_raw:
+        return jsonify({"error": "input 為必填欄位"}), 400
+    if len(input_raw) > 2000:
+        return jsonify({"error": "input 長度不可超過 2000 字元"}), 400
+    if mode not in {"quick", "deep"}:
+        return jsonify({"error": "mode 只允許 quick 或 deep"}), 400
+
+    task = submit_task(input_raw=input_raw, mode=mode, force_refresh=True)
+    return jsonify(_extract_task_public_fields(task)), 200
+
+
 @bp.get("/task/<task_id>")
 def get_task(task_id: str):
     """Get latest status of a task."""

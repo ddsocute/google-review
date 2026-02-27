@@ -67,6 +67,7 @@
                         <div id="historyTags" class="history-tags"></div>
                     </div>
 
+                    <!-- Mobile-first Google Maps–style search bar -->
                     <div class="input-group">
                         <input
                             type="url"
@@ -97,6 +98,30 @@
                         </button>
                     </div>
                     <p class="input-hint" id="inputHint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
+
+                    <!-- Mobile map-style shell: fake map + bottom sheet for status -->
+                    <section class="mobile-map-shell" aria-label="店家位置與摘要（模擬地圖介面）">
+                        <div class="mobile-map-fake" id="mobileMapFake">
+                            <div class="mobile-map-grid"></div>
+                            <div class="mobile-map-pin"></div>
+                            <div class="mobile-map-overlay">
+                                <div class="mobile-map-poi" id="mobileMapPoi" style="display:none;">
+                                    <div class="mobile-map-poi-name" id="mobilePoiName">餐廳名稱</div>
+                                    <div class="mobile-map-poi-meta" id="mobilePoiMeta">將根據 Google Maps 評論自動整理摘要</div>
+                                </div>
+                                <div class="mobile-map-hint" id="mobileMapHint">
+                                    搜尋或貼上餐廳後，這裡會顯示類似 Google Maps 的位置卡片與摘要，往下滑即可閱讀完整分析報告。
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mobile-map-bottomsheet">
+                            <div class="bottomsheet-handle"></div>
+                            <p class="bottomsheet-title">評論分析報告預覽</p>
+                            <p class="bottomsheet-desc" id="mobileSheetDesc">
+                                選擇餐廳並完成分析後，下方會展開「食神」為你整理的完整評論分析報告。
+                            </p>
+                        </div>
+                    </section>
 
                     <!-- Name-search results (only used in 用店名找餐廳 模式) -->
                     <div id="searchResultsPanel" class="search-results hidden">
