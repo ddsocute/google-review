@@ -366,8 +366,25 @@
             row.type = "button";
             row.className = "search-result-item";
             row.addEventListener("click", function () {
-                // 選擇列表中的店家時，先顯示資訊卡，再由使用者決定是否開始分析
-                showPlacePreview(item);
+                // 點同一個店家：收合目前展開的資訊卡；點不同店家：展開資訊卡
+                var samePlace = false;
+                if (selectedPlace && item) {
+                    if (selectedPlace.place_id && item.place_id && selectedPlace.place_id === item.place_id) {
+                        samePlace = true;
+                    } else if (selectedPlace.maps_url && item.maps_url && selectedPlace.maps_url === item.maps_url) {
+                        samePlace = true;
+                    } else if (!selectedPlace.place_id && !item.place_id && selectedPlace.name && item.name && selectedPlace.name === item.name) {
+                        samePlace = true;
+                    }
+                }
+
+                if (samePlace) {
+                    // 再次點擊相同店家：收起剛剛展開的資訊
+                    hidePlacePreview();
+                } else {
+                    // 選擇列表中的店家時，先在下方展開資訊卡與高清地圖，由使用者決定是否開始分析
+                    showPlacePreview(item);
+                }
             });
 
             var title = document.createElement("div");
