@@ -7,16 +7,23 @@ import urllib.parse
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
+
+# IMPORTANT: load .env BEFORE importing modules that read env at import-time.
+# Also pin the path so running from a different working directory still works.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# `override=True` so project `.env` wins over any stale OS-level APIFY_TOKEN.
+load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
+
 from services.cache_store import init_db, get_cached_analysis, set_cached_analysis
-from services.place_store import init_place_db, record_place_from_analysis, list_places
+from services.place_store import init_place_db, record_place_from_analysis, list_places, list_catalog_with_analysis
+from services.review_store import init_review_db
+from services.job_store import init_job_db, get_job as get_job_row, list_jobs as list_job_rows
 from services.url_normalizer import canonicalize
 from services.apify_client import (
     scrape_reviews as apify_scrape_reviews,
     search_places_by_text as apify_search_places,
 )
 from routes.api_tasks import bp as api_tasks_bp
-
-load_dotenv()
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
@@ -25,6 +32,8 @@ app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
 # Initialize local cache DB, places DB and task-based API routes
 init_db()
 init_place_db()
+init_review_db()
+init_job_db()
 app.register_blueprint(api_tasks_bp)
 
 def get_apify_token() -> str:
@@ -960,6 +969,87 @@ def api_my_places():
 
     items = list_places(limit=limit)
     return jsonify({"items": items, "count": len(items)})
+
+
+@app.route("/api/catalog", methods=["GET"])
+def api_catalog():
+    """
+    Return a discovered catalog list (e.g. prebuilt district list like 'xinyi').
+
+    This is purely local DB read (fast) and is meant to power "信義區直接出清單" UX.
+    """
+    tag = (request.args.get("tag") or "xinyi").strip()
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 200))
+
+    only_analyzed_raw = (request.args.get("only_analyzed") or "").strip().lower()
+    only_analyzed = only_analyzed_raw in {"1", "true", "yes", "y", "on"}
+
+    items = list_catalog_with_analysis(tag=tag, limit=limit, only_analyzed=only_analyzed)
+    return jsonify({"tag": tag, "items": items, "count": len(items), "only_analyzed": only_analyzed})
+
+
+@app.route("/api/catalog_analysis", methods=["GET"])
+def api_catalog_analysis():
+    """
+    Return cached analysis JSON for a catalog item by canonical_url.
+
+    Notes:
+    - We do NOT re-run scraping/LLM here; this endpoint is "read cached results only".
+    - If cache is expired/missing, caller should trigger `/api/analyze` for refresh.
+    """
+    canonical_url = (request.args.get("canonical_url") or "").strip()
+    mode = (request.args.get("mode") or "quick").strip() or "quick"
+    # Default to allow stale cache for "read-only cached analysis" UX:
+    # Users prefer seeing an older analysis over a 404.
+    allow_stale_raw = request.args.get("allow_stale")
+    if allow_stale_raw is None:
+        allow_stale = True
+    else:
+        allow_stale = (str(allow_stale_raw) or "").strip().lower() in {"1", "true", "yes", "y", "on"}
+    if not canonical_url:
+        return jsonify({"error": "請提供 canonical_url"}), 400
+
+    try:
+        norm = canonicalize(canonical_url)
+    except Exception:
+        norm = {}
+    cache_key = norm.get("cache_key")
+    if not cache_key:
+        h = hashlib.sha256(canonical_url.encode("utf-8")).hexdigest()[:16]
+        cache_key = f"url:{h}"
+
+    try:
+        entry = get_cached_analysis(cache_key, mode, allow_stale=allow_stale)
+    except Exception:
+        entry = None
+
+    if entry is None:
+        return jsonify({"error": "cache miss (not analyzed yet or cache expired)"}), 404
+
+    return jsonify(entry.as_result_object())
+
+
+@app.route("/api/jobs", methods=["GET"])
+def api_jobs_list():
+    try:
+        limit = int(request.args.get("limit", "20"))
+    except (TypeError, ValueError):
+        limit = 20
+    limit = max(1, min(limit, 200))
+    items = list_job_rows(limit=limit)
+    return jsonify({"items": items, "count": len(items)})
+
+
+@app.route("/api/jobs/<job_id>", methods=["GET"])
+def api_jobs_get(job_id: str):
+    row = get_job_row(job_id)
+    if not row:
+        return jsonify({"error": "job not found"}), 404
+    return jsonify(row)
 
 
 @app.route("/api/map_search", methods=["POST"])

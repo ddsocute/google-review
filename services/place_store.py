@@ -23,6 +23,7 @@ def init_place_db(db_path: Optional[str] = None) -> None:
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
+        # Core analysed places table
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS places (
@@ -37,6 +38,46 @@ def init_place_db(db_path: Optional[str] = None) -> None:
                 last_analyzed_at TEXT NOT NULL
             )
             """
+        )
+
+        # Catalog table: discovered places (e.g. prebuilt district lists) before analysis.
+        # IMPORTANT:
+        #   - We allow the same canonical_url to appear under multiple tags (e.g. a chain
+        #     restaurant that logically belongs to several districts / themes).
+        #   - Therefore the natural uniqueness key is (tag, canonical_url) instead of just
+        #     canonical_url.
+        #   - This keeps each catalog "view" independent while still using a shared
+        #     underlying analysis cache / places table keyed only by canonical_url.
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS place_catalog (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tag TEXT NOT NULL,
+                canonical_url TEXT NOT NULL,
+                maps_url TEXT,
+                place_id TEXT,
+                name TEXT,
+                address TEXT,
+                lat REAL,
+                lng REAL,
+                google_rating REAL,
+                user_ratings_total INTEGER,
+                source_query TEXT,
+                discovered_at TEXT NOT NULL,
+                last_seen_at TEXT NOT NULL,
+                last_analyzed_at TEXT,
+                last_analyze_status TEXT,
+                last_error TEXT,
+                UNIQUE (tag, canonical_url)
+            )
+            """
+        )
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_place_catalog_tag ON place_catalog(tag)")
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_place_catalog_last_seen ON place_catalog(last_seen_at)"
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_place_catalog_last_analyzed ON place_catalog(last_analyzed_at)"
         )
         conn.commit()
     finally:
@@ -184,4 +225,245 @@ def list_places(
 
 
 __all__ = ["init_place_db", "record_place_from_analysis", "list_places"]
+
+
+def upsert_catalog_place(
+    *,
+    tag: str,
+    canonical_url: str,
+    maps_url: Optional[str] = None,
+    place_id: Optional[str] = None,
+    name: Optional[str] = None,
+    address: Optional[str] = None,
+    lat: Optional[float] = None,
+    lng: Optional[float] = None,
+    google_rating: Optional[float] = None,
+    user_ratings_total: Optional[int] = None,
+    source_query: Optional[str] = None,
+    last_analyzed_at: Optional[str] = None,
+    last_analyze_status: Optional[str] = None,
+    last_error: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> None:
+    if not tag or not canonical_url:
+        return
+
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_connection(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO place_catalog (
+                tag,
+                canonical_url,
+                maps_url,
+                place_id,
+                name,
+                address,
+                lat,
+                lng,
+                google_rating,
+                user_ratings_total,
+                source_query,
+                discovered_at,
+                last_seen_at,
+                last_analyzed_at,
+                last_analyze_status,
+                last_error
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(tag, canonical_url) DO UPDATE SET
+                maps_url = COALESCE(excluded.maps_url, place_catalog.maps_url),
+                place_id = COALESCE(excluded.place_id, place_catalog.place_id),
+                name = COALESCE(excluded.name, place_catalog.name),
+                address = COALESCE(excluded.address, place_catalog.address),
+                lat = COALESCE(excluded.lat, place_catalog.lat),
+                lng = COALESCE(excluded.lng, place_catalog.lng),
+                google_rating = COALESCE(excluded.google_rating, place_catalog.google_rating),
+                user_ratings_total = COALESCE(excluded.user_ratings_total, place_catalog.user_ratings_total),
+                source_query = COALESCE(excluded.source_query, place_catalog.source_query),
+                last_seen_at = excluded.last_seen_at,
+                last_analyzed_at = COALESCE(excluded.last_analyzed_at, place_catalog.last_analyzed_at),
+                last_analyze_status = COALESCE(excluded.last_analyze_status, place_catalog.last_analyze_status),
+                last_error = COALESCE(excluded.last_error, place_catalog.last_error)
+            """,
+            (
+                tag,
+                canonical_url,
+                maps_url,
+                place_id,
+                name,
+                address,
+                lat,
+                lng,
+                google_rating,
+                user_ratings_total,
+                source_query,
+                now,
+                now,
+                last_analyzed_at,
+                last_analyze_status,
+                last_error,
+            ),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def list_catalog_places(
+    *,
+    tag: str,
+    limit: int = 1000,
+    db_path: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    if not tag:
+        return []
+    limit = max(1, min(int(limit), 50000))
+    conn = _get_connection(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT
+                id,
+                tag,
+                canonical_url,
+                maps_url,
+                place_id,
+                name,
+                address,
+                lat,
+                lng,
+                google_rating,
+                user_ratings_total,
+                source_query,
+                discovered_at,
+                last_seen_at,
+                last_analyzed_at,
+                last_analyze_status,
+                last_error
+            FROM place_catalog
+            WHERE tag = ?
+            ORDER BY datetime(last_seen_at) DESC
+            LIMIT ?
+            """,
+            (tag, limit),
+        )
+        rows = cur.fetchall()
+        items: List[Dict[str, Any]] = []
+        for row in rows:
+            items.append({k: row[k] for k in row.keys()})
+        return items
+    finally:
+        conn.close()
+
+
+def list_catalog_with_analysis(
+    *,
+    tag: str,
+    limit: int = 200,
+    only_analyzed: bool = False,
+    db_path: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Return catalog rows for a tag, joined with lightweight analysis metadata from `places`.
+
+    This is designed for "prebuilt district lists" (e.g. xinyi) where we want to:
+    - show the discovered list quickly
+    - indicate whether an item already has analysis cached (places row exists)
+    - optionally filter to only analyzed items
+    """
+    if not tag:
+        return []
+    limit = max(1, min(int(limit), 1000))
+
+    conn = _get_connection(db_path)
+    try:
+        cur = conn.cursor()
+        where_extra = "AND p.canonical_url IS NOT NULL" if only_analyzed else ""
+        cur.execute(
+            f"""
+            SELECT
+                c.id,
+                c.tag,
+                c.canonical_url,
+                c.maps_url,
+                c.place_id,
+                c.name,
+                c.address,
+                c.lat,
+                c.lng,
+                c.google_rating,
+                c.user_ratings_total,
+                c.source_query,
+                c.discovered_at,
+                c.last_seen_at,
+                c.last_analyzed_at AS catalog_last_analyzed_at,
+                c.last_analyze_status,
+                c.last_error,
+                p.display_name AS analyzed_display_name,
+                p.last_overall_score,
+                p.total_reviews_analyzed,
+                p.last_analyzed_at AS analyzed_last_analyzed_at
+            FROM place_catalog c
+            LEFT JOIN places p
+                ON p.canonical_url = c.canonical_url
+            WHERE c.tag = ?
+              {where_extra}
+            ORDER BY datetime(c.last_seen_at) DESC
+            LIMIT ?
+            """,
+            (tag, limit),
+        )
+        rows = cur.fetchall()
+        items: List[Dict[str, Any]] = []
+        for row in rows:
+            d = {k: row[k] for k in row.keys()}
+            d["analysis_available"] = bool(d.get("analyzed_last_analyzed_at"))
+            items.append(d)
+        return items
+    finally:
+        conn.close()
+
+
+def update_catalog_analyze_status(
+    *,
+    tag: str,
+    canonical_url: str,
+    status: str,
+    error: Optional[str] = None,
+    db_path: Optional[str] = None,
+) -> None:
+    if not tag or not canonical_url:
+        return
+    now = datetime.now(timezone.utc).isoformat()
+    conn = _get_connection(db_path)
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE place_catalog
+            SET last_analyzed_at = ?,
+                last_analyze_status = ?,
+                last_error = ?
+            WHERE tag = ? AND canonical_url = ?
+            """,
+            (now, status, error, tag, canonical_url),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+__all__ = [
+    "init_place_db",
+    "record_place_from_analysis",
+    "list_places",
+    "upsert_catalog_place",
+    "list_catalog_places",
+    "list_catalog_with_analysis",
+    "update_catalog_analyze_status",
+]
 

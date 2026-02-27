@@ -1,3 +1,24 @@
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.env.*
+
+# local OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# SQLite transient files
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+
 # Python
 venv/
 __pycache__/

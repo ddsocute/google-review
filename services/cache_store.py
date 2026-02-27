@@ -116,11 +116,16 @@ def _row_to_entry(row: sqlite3.Row) -> CacheEntry:
 def get_cached_analysis(
     cache_key: str,
     mode: str,
+    *,
+    allow_stale: bool = False,
     db_path: Optional[str] = None,
 ) -> Optional[CacheEntry]:
     """
     取得未過期的快取內容。
-    若資料不存在或已超過 TTL，回傳 None。
+    若資料不存在回傳 None。
+
+    預設會套用 TTL：超過 TTL 視同 miss 回傳 None。
+    若 allow_stale=True，則即使超過 TTL 仍會回傳資料（用於「舊資料仍可讀」的情境）。
     """
     now = datetime.now(timezone.utc)
     conn = _get_connection(db_path)
@@ -141,7 +146,8 @@ def get_cached_analysis(
         entry = _row_to_entry(row)
         if now - entry.created_at > timedelta(seconds=CACHE_TTL_SECONDS):
             # 視同 miss（不在這裡刪除，交給 purge_expired 或後台處理）
-            return None
+            if not allow_stale:
+                return None
         return entry
     finally:
         conn.close()
