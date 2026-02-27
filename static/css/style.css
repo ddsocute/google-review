@@ -598,6 +598,239 @@ body.sidebar-collapsed .sidebar {
     color: var(--text-secondary);
 }
 
+/* 展開中的單一搜尋結果（地圖 + 詳細資訊 + 照片），風格對齊整體 dashboard */
+.search-result-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 16px 14px;
+    background: var(--bg-white);
+    border-top: 1px solid var(--border-light);
+}
+
+.search-result-map {
+    width: 100%;
+    border-radius: var(--radius-md, 14px);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+}
+
+.search-result-detail-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.search-result-detail-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.search-result-detail-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.search-result-detail-address {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.search-result-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+/* 直接沿用 / 對齊上方 place-preview 的按鈕樣式 */
+.search-result-detail .btn-preview-analyze,
+.search-result-detail .btn-preview-maps {
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition);
+}
+
+.search-result-detail .btn-preview-analyze {
+    background: #17120f;
+    color: #fff;
+    border-color: #17120f;
+}
+
+.search-result-detail .btn-preview-analyze:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.search-result-detail .btn-preview-maps:hover {
+    background: var(--bg-hover);
+    border-color: rgba(23,18,15,0.28);
+}
+
+/* 清單內「環境一瞥」照片縮圖列 */
+.search-result-photos {
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-light);
+}
+
+.search-result-photos-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.search-result-photos-row {
+    display: flex;
+    gap: 6px;
+}
+
+.search-result-photo {
+    border: none;
+    padding: 0;
+    background: none;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    flex: 0 0 30%;
+    max-width: 32%;
+    box-shadow: 0 6px 18px rgba(15,10,5,0.14);
+}
+
+.search-result-photo img {
+    display: block;
+    width: 100%;
+    height: 72px;
+    object-fit: cover;
+}
+
+@media (min-width: 720px) {
+    .search-results-list {
+        max-height: 320px;
+    }
+
+    .search-result-detail {
+        flex-direction: row;
+        align-items: stretch;
+        gap: 14px;
+    }
+
+    .search-result-map {
+        flex: 0 0 42%;
+        min-height: 150px;
+    }
+
+    .search-result-detail-info {
+        flex: 1;
+    }
+
+    .search-result-photos-row {
+        justify-content: flex-start;
+    }
+}
+
+/* ---------- Place preview card (selected search result) ---------- */
+.place-preview {
+    margin-top: 14px;
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    text-align: left;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 12px 16px;
+}
+
+.place-preview-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.place-preview-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.place-preview-name {
+    font-size: 0.96rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.place-preview-meta {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.place-preview-address {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.place-preview-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.btn-preview-analyze,
+.btn-preview-maps {
+    padding: 7px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-light);
+    background: var(--bg-input);
+    color: var(--text-primary);
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all var(--transition);
+}
+
+.btn-preview-analyze {
+    background: #17120f;
+    color: #fff;
+    border-color: #17120f;
+}
+
+.btn-preview-analyze:hover {
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-preview-maps:hover {
+    background: var(--bg-hover);
+    border-color: rgba(23,18,15,0.28);
+}
+
+@media (max-width: 600px) {
+    .place-preview-main {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .place-preview-actions {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
 /* ---------- Input Mode Toggle (URL vs Name) ---------- */
 .input-mode-toggle {
     display: flex;

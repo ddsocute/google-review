@@ -178,6 +178,26 @@ def search_places_by_text(
             or (f"https://www.google.com/maps/place/?q=place_id:{place_id}" if place_id else None)
         )
 
+        # Optional: lightweight photo previews for place list（用在清單內小縮圖，不做額外 API 呼叫）
+        photo_urls: List[str] = []
+        try:
+            # 嘗試從幾種常見欄位抓圖片：不同 Apify actor / 版本欄位名稱可能不一樣
+            candidates = None
+            for key in ("photoUrls", "imageUrls", "photos", "images", "gallery"):
+                value = item.get(key)
+                if isinstance(value, list) and value:
+                    candidates = value
+                    break
+            if candidates:
+                photo_urls = [
+                    str(u)
+                    for u in candidates
+                    if isinstance(u, str) and u.startswith("http")
+                ][:6]
+        except Exception:
+            # 圖片失敗不影響主要功能
+            photo_urls = []
+
         # optional geo fields for map view
         lat: Optional[float] = None
         lng: Optional[float] = None
@@ -208,6 +228,8 @@ def search_places_by_text(
                 "maps_url": maps_url,
                 "lat": lat,
                 "lng": lng,
+                # 前端清單內店家預覽圖（最多數張、主要用作「環境一瞥」）
+                "photos": photo_urls,
             }
         )
 

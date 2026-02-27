@@ -39,15 +39,15 @@
     var selectedPlace = null;
     var openResultDetail = null;
 
-    // 在清單中的某一列下方產生「高清地圖 + 店家資訊 + 按鈕」區塊
+    // 在清單中的某一列下方產生「地圖 + 店家資訊 + 環境照片 + 按鈕」區塊
     function buildInlineDetail(item) {
         var wrapper = document.createElement("div");
         wrapper.className = "search-result-detail hidden";
 
-        // Map container（使用 Leaflet，將高度調高一點讓畫質更清晰）
+        // Map container：縮小高度、搭配 CSS 讓版面更接近 Google Maps 清單預覽
         var mapBox = document.createElement("div");
         mapBox.className = "search-result-map";
-        mapBox.style.height = "230px";
+        mapBox.style.height = "160px";
         mapBox.style.borderRadius = "16px";
         mapBox.style.overflow = "hidden";
         mapBox.style.marginTop = "12px";
@@ -109,6 +109,54 @@
         info.appendChild(actions);
 
         wrapper.appendChild(info);
+
+        // Optional: 環境照片縮圖（最多 3 張），讓使用者在跑完整分析前先快速感受店家氛圍
+        try {
+            var photos = Array.isArray(item && item.photos) ? item.photos.slice(0, 3) : [];
+            if (photos.length) {
+                var photosBlock = document.createElement("div");
+                photosBlock.className = "search-result-photos";
+
+                var photosLabel = document.createElement("div");
+                photosLabel.className = "search-result-photos-label";
+                photosLabel.textContent = "環境一瞥";
+                photosBlock.appendChild(photosLabel);
+
+                var photosRow = document.createElement("div");
+                photosRow.className = "search-result-photos-row";
+
+                photos.forEach(function (url) {
+                    if (!url) return;
+                    var thumb = document.createElement("button");
+                    thumb.type = "button";
+                    thumb.className = "search-result-photo";
+                    thumb.addEventListener("click", function (e) {
+                        e.stopPropagation();
+                        if (typeof window.openLightbox === "function") {
+                            window.openLightbox(url);
+                        } else {
+                            window.open(url, "_blank");
+                        }
+                    });
+
+                    var img = document.createElement("img");
+                    img.src = url;
+                    img.alt = "店家環境照片預覽";
+                    img.loading = "lazy";
+                    img.onerror = function () {
+                        thumb.style.display = "none";
+                    };
+
+                    thumb.appendChild(img);
+                    photosRow.appendChild(thumb);
+                });
+
+                photosBlock.appendChild(photosRow);
+                wrapper.appendChild(photosBlock);
+            }
+        } catch (e) {
+            // 照片區塊失敗不影響其他資訊
+        }
 
         // 懶載入 Leaflet 地圖，只有真的展開時才初始化，並調高 zoom 讓畫面更清楚
         wrapper._ensureMap = function ensureInlineMap() {
