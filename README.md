@@ -3,6 +3,28 @@
 本專案支援把「台北市信義區」店家先批次建檔（店家清單 + 評論 AI 分析快取），
 讓使用者日後查詢時大多數情況能直接命中 `analysis_cache.db`，大幅縮短等待時間。
 
+## Vercel 部署（持久化快取 / 店家清單）
+
+Vercel 上的本地檔案系統是 **暫存**（SQLite 會落在 `/tmp`，不會持久化），
+因此若你希望「第二次查詢直接命中快取」與「保留以前分析過的店家清單」，
+請在 Vercel 建立 Postgres（例如 Neon / Vercel Postgres）並設定環境變數：
+
+- `POSTGRES_URL`
+
+程式會在偵測到 `POSTGRES_URL` 時，將以下表改存 Postgres：
+- `analysis_cache`
+- `places`
+- `place_catalog`
+
+### 把本機 SQLite 舊資料搬到 Postgres（一次性）
+
+1) 將 `POSTGRES_URL` 放進本機 `.env`（可參考 `env.example`）
+2) 執行：
+
+```bash
+venv\Scripts\python.exe scripts\migrate_sqlite_to_postgres.py
+```
+
 ## 重要說明（關於「抓到所有信義區餐廳」）
 
 Google / Apify 的搜尋結果本質上是「排序後的前 N 筆」，單一關鍵字一定會漏。

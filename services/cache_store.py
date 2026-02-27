@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
+# Optional Postgres-backed cache:
+# - If POSTGRES_URL (or DATABASE_URL) is set, we use Postgres for `analysis_cache`
+# - Otherwise we fall back to local SQLite.
+# This is designed for Vercel deployment where SQLite is ephemeral (/tmp).
+
 # SQLite DB 位置：
 # - 一般本機 / 傳統伺服器：專案根目錄下 data/analysis_cache.db
 # - Vercel 等 Serverless 平台：必須使用可寫入的暫存目錄（例如 /tmp），
@@ -58,6 +63,34 @@ def _get_connection(db_path: Optional[str] = None) -> sqlite3.Connection:
     return conn
 
 
+def _get_postgres_url() -> str:
+    """
+    Vercel Postgres / Neon usually provides POSTGRES_URL (pooled) and/or DATABASE_URL.
+    Prefer pooled URL for serverless.
+    """
+    return (
+        os.getenv("POSTGRES_URL")
+        or os.getenv("POSTGRES_URL_NON_POOLING")
+        or os.getenv("DATABASE_URL")
+        or ""
+    ).strip()
+
+
+def _use_postgres_cache() -> bool:
+    return bool(_get_postgres_url())
+
+
+def _pg_connect():
+    # Lazy import so local dev without psycopg still works when Postgres is not enabled.
+    import psycopg
+    from psycopg.rows import dict_row
+
+    url = _get_postgres_url()
+    if not url:
+        raise RuntimeError("POSTGRES_URL is not set")
+    return psycopg.connect(url, row_factory=dict_row)
+
+
 def init_db(db_path: Optional[str] = None) -> None:
     """
     確保資料庫與 analysis_cache 資料表存在。
@@ -71,6 +104,31 @@ def init_db(db_path: Optional[str] = None) -> None:
       - created_at (TIMESTAMP, ISO8601 UTC)
       - PRIMARY KEY (cache_key, mode)
     """
+    if _use_postgres_cache():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS analysis_cache (
+                        cache_key TEXT NOT NULL,
+                        mode TEXT NOT NULL,
+                        canonical_url TEXT NOT NULL,
+                        display_name TEXT NOT NULL,
+                        result_json TEXT NOT NULL,
+                        created_at TIMESTAMPTZ NOT NULL,
+                        PRIMARY KEY (cache_key, mode)
+                    )
+                    """
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_analysis_cache_created_at ON analysis_cache(created_at)"
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -95,13 +153,21 @@ def init_db(db_path: Optional[str] = None) -> None:
 
 
 def _row_to_entry(row: sqlite3.Row) -> CacheEntry:
-    created_at_str = row["created_at"]
-    try:
-        created_at = datetime.fromisoformat(created_at_str)
+    created_at_val = row["created_at"]
+    if isinstance(created_at_val, datetime):
+        created_at = created_at_val
         if created_at.tzinfo is None:
             created_at = created_at.replace(tzinfo=timezone.utc)
-    except Exception:
-        created_at = datetime.now(timezone.utc)
+        else:
+            created_at = created_at.astimezone(timezone.utc)
+    else:
+        created_at_str = str(created_at_val or "")
+        try:
+            created_at = datetime.fromisoformat(created_at_str)
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(tzinfo=timezone.utc)
+        except Exception:
+            created_at = datetime.now(timezone.utc)
 
     return CacheEntry(
         cache_key=row["cache_key"],
@@ -128,6 +194,29 @@ def get_cached_analysis(
     若 allow_stale=True，則即使超過 TTL 仍會回傳資料（用於「舊資料仍可讀」的情境）。
     """
     now = datetime.now(timezone.utc)
+
+    if _use_postgres_cache():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT cache_key, mode, canonical_url, display_name, result_json, created_at
+                    FROM analysis_cache
+                    WHERE cache_key = %s AND mode = %s
+                    """,
+                    (cache_key, mode),
+                )
+                row = cur.fetchone()
+                if not row:
+                    return None
+                entry = _row_to_entry(row)
+        finally:
+            conn.close()
+        if now - entry.created_at > timedelta(seconds=CACHE_TTL_SECONDS) and not allow_stale:
+            return None
+        return entry
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -165,13 +254,37 @@ def set_cached_analysis(
     寫入或覆寫快取紀錄。
     result_obj 會被序列化成 JSON 字串存入 result_json。
     """
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at_dt = datetime.now(timezone.utc)
     try:
         result_json = json.dumps(result_obj, ensure_ascii=False)
     except TypeError:
         # 若無法序列化，就轉成字串儲存
         result_json = json.dumps(str(result_obj), ensure_ascii=False)
 
+    if _use_postgres_cache():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO analysis_cache (
+                        cache_key, mode, canonical_url, display_name, result_json, created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (cache_key, mode) DO UPDATE SET
+                        canonical_url = EXCLUDED.canonical_url,
+                        display_name = EXCLUDED.display_name,
+                        result_json = EXCLUDED.result_json,
+                        created_at = EXCLUDED.created_at
+                    """,
+                    (cache_key, mode, canonical_url, display_name, result_json, created_at_dt),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
+    created_at = created_at_dt.isoformat()
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -200,6 +313,19 @@ def delete_cache_entry(
     db_path: Optional[str] = None,
 ) -> None:
     """刪除指定快取紀錄。"""
+    if _use_postgres_cache():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM analysis_cache WHERE cache_key = %s AND mode = %s",
+                    (cache_key, mode),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -221,8 +347,19 @@ def purge_expired(
     回傳實際刪除的筆數。
     """
     threshold = datetime.now(timezone.utc) - timedelta(seconds=CACHE_TTL_SECONDS)
-    threshold_str = threshold.isoformat()
 
+    if _use_postgres_cache():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM analysis_cache WHERE created_at < %s", (threshold,))
+                deleted = cur.rowcount or 0
+            conn.commit()
+            return deleted
+        finally:
+            conn.close()
+
+    threshold_str = threshold.isoformat()
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()

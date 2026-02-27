@@ -1,8 +1,33 @@
+import os
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from .cache_store import _get_connection
+
+
+def _get_postgres_url() -> str:
+    return (
+        os.getenv("POSTGRES_URL")
+        or os.getenv("POSTGRES_URL_NON_POOLING")
+        or os.getenv("DATABASE_URL")
+        or ""
+    ).strip()
+
+
+def _use_postgres_places() -> bool:
+    return bool(_get_postgres_url())
+
+
+def _pg_connect():
+    # Lazy import so local dev without psycopg still works if Postgres is not enabled.
+    import psycopg
+    from psycopg.rows import dict_row
+
+    url = _get_postgres_url()
+    if not url:
+        raise RuntimeError("POSTGRES_URL is not set")
+    return psycopg.connect(url, row_factory=dict_row)
 
 
 def init_place_db(db_path: Optional[str] = None) -> None:
@@ -20,6 +45,61 @@ def init_place_db(db_path: Optional[str] = None) -> None:
       - total_reviews_analyzed INTEGER
       - last_analyzed_at TEXT (ISO8601 UTC)
     """
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS places (
+                        id BIGSERIAL PRIMARY KEY,
+                        canonical_url TEXT NOT NULL UNIQUE,
+                        display_name TEXT NOT NULL,
+                        address TEXT,
+                        google_rating DOUBLE PRECISION,
+                        user_ratings_total BIGINT,
+                        last_overall_score DOUBLE PRECISION,
+                        total_reviews_analyzed BIGINT,
+                        last_analyzed_at TIMESTAMPTZ NOT NULL
+                    )
+                    """
+                )
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS place_catalog (
+                        id BIGSERIAL PRIMARY KEY,
+                        tag TEXT NOT NULL,
+                        canonical_url TEXT NOT NULL,
+                        maps_url TEXT,
+                        place_id TEXT,
+                        name TEXT,
+                        address TEXT,
+                        lat DOUBLE PRECISION,
+                        lng DOUBLE PRECISION,
+                        google_rating DOUBLE PRECISION,
+                        user_ratings_total BIGINT,
+                        source_query TEXT,
+                        discovered_at TIMESTAMPTZ NOT NULL,
+                        last_seen_at TIMESTAMPTZ NOT NULL,
+                        last_analyzed_at TIMESTAMPTZ,
+                        last_analyze_status TEXT,
+                        last_error TEXT,
+                        UNIQUE (tag, canonical_url)
+                    )
+                    """
+                )
+                cur.execute("CREATE INDEX IF NOT EXISTS idx_place_catalog_tag ON place_catalog(tag)")
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_place_catalog_last_seen ON place_catalog(last_seen_at)"
+                )
+                cur.execute(
+                    "CREATE INDEX IF NOT EXISTS idx_place_catalog_last_analyzed ON place_catalog(last_analyzed_at)"
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -132,7 +212,51 @@ def record_place_from_analysis(
     except (TypeError, ValueError):
         total_reviews_int = None
 
-    now = datetime.now(timezone.utc).isoformat()
+    now_dt = datetime.now(timezone.utc)
+
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO places (
+                        canonical_url,
+                        display_name,
+                        address,
+                        google_rating,
+                        user_ratings_total,
+                        last_overall_score,
+                        total_reviews_analyzed,
+                        last_analyzed_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (canonical_url) DO UPDATE SET
+                        display_name = EXCLUDED.display_name,
+                        address = COALESCE(EXCLUDED.address, places.address),
+                        google_rating = EXCLUDED.google_rating,
+                        user_ratings_total = EXCLUDED.user_ratings_total,
+                        last_overall_score = EXCLUDED.last_overall_score,
+                        total_reviews_analyzed = EXCLUDED.total_reviews_analyzed,
+                        last_analyzed_at = EXCLUDED.last_analyzed_at
+                    """,
+                    (
+                        canonical_url,
+                        display_name,
+                        address,
+                        google_rating,
+                        user_ratings_total,
+                        overall_score_val,
+                        total_reviews_int,
+                        now_dt,
+                    ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
+    now = now_dt.isoformat()
 
     conn = _get_connection(db_path)
     try:
@@ -181,6 +305,40 @@ def list_places(
     """
     List recently analysed places from local DB, newest first.
     """
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        canonical_url,
+                        display_name,
+                        address,
+                        google_rating,
+                        user_ratings_total,
+                        last_overall_score,
+                        total_reviews_analyzed,
+                        last_analyzed_at
+                    FROM places
+                    ORDER BY last_analyzed_at DESC
+                    LIMIT %s
+                    """,
+                    (int(limit),),
+                )
+                rows = cur.fetchall() or []
+                items: List[Dict[str, Any]] = []
+                for row in rows:
+                    d = dict(row)
+                    la = d.get("last_analyzed_at")
+                    if isinstance(la, datetime):
+                        d["last_analyzed_at"] = la.astimezone(timezone.utc).isoformat()
+                    items.append(d)
+                return items
+        finally:
+            conn.close()
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -248,7 +406,73 @@ def upsert_catalog_place(
     if not tag or not canonical_url:
         return
 
-    now = datetime.now(timezone.utc).isoformat()
+    now_dt = datetime.now(timezone.utc)
+
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO place_catalog (
+                        tag,
+                        canonical_url,
+                        maps_url,
+                        place_id,
+                        name,
+                        address,
+                        lat,
+                        lng,
+                        google_rating,
+                        user_ratings_total,
+                        source_query,
+                        discovered_at,
+                        last_seen_at,
+                        last_analyzed_at,
+                        last_analyze_status,
+                        last_error
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (tag, canonical_url) DO UPDATE SET
+                        maps_url = COALESCE(EXCLUDED.maps_url, place_catalog.maps_url),
+                        place_id = COALESCE(EXCLUDED.place_id, place_catalog.place_id),
+                        name = COALESCE(EXCLUDED.name, place_catalog.name),
+                        address = COALESCE(EXCLUDED.address, place_catalog.address),
+                        lat = COALESCE(EXCLUDED.lat, place_catalog.lat),
+                        lng = COALESCE(EXCLUDED.lng, place_catalog.lng),
+                        google_rating = COALESCE(EXCLUDED.google_rating, place_catalog.google_rating),
+                        user_ratings_total = COALESCE(EXCLUDED.user_ratings_total, place_catalog.user_ratings_total),
+                        source_query = COALESCE(EXCLUDED.source_query, place_catalog.source_query),
+                        last_seen_at = EXCLUDED.last_seen_at,
+                        last_analyzed_at = COALESCE(EXCLUDED.last_analyzed_at, place_catalog.last_analyzed_at),
+                        last_analyze_status = COALESCE(EXCLUDED.last_analyze_status, place_catalog.last_analyze_status),
+                        last_error = COALESCE(EXCLUDED.last_error, place_catalog.last_error)
+                    """,
+                    (
+                        tag,
+                        canonical_url,
+                        maps_url,
+                        place_id,
+                        name,
+                        address,
+                        lat,
+                        lng,
+                        google_rating,
+                        user_ratings_total,
+                        source_query,
+                        now_dt,
+                        now_dt,
+                        last_analyzed_at,
+                        last_analyze_status,
+                        last_error,
+                    ),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
+    now = now_dt.isoformat()
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -321,6 +545,51 @@ def list_catalog_places(
     if not tag:
         return []
     limit = max(1, min(int(limit), 50000))
+
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        id,
+                        tag,
+                        canonical_url,
+                        maps_url,
+                        place_id,
+                        name,
+                        address,
+                        lat,
+                        lng,
+                        google_rating,
+                        user_ratings_total,
+                        source_query,
+                        discovered_at,
+                        last_seen_at,
+                        last_analyzed_at,
+                        last_analyze_status,
+                        last_error
+                    FROM place_catalog
+                    WHERE tag = %s
+                    ORDER BY last_seen_at DESC
+                    LIMIT %s
+                    """,
+                    (tag, limit),
+                )
+                rows = cur.fetchall() or []
+                items: List[Dict[str, Any]] = []
+                for row in rows:
+                    d = dict(row)
+                    for k in ("discovered_at", "last_seen_at", "last_analyzed_at"):
+                        v = d.get(k)
+                        if isinstance(v, datetime):
+                            d[k] = v.astimezone(timezone.utc).isoformat()
+                    items.append(d)
+                return items
+        finally:
+            conn.close()
+
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
@@ -378,6 +647,64 @@ def list_catalog_with_analysis(
     if not tag:
         return []
     limit = max(1, min(int(limit), 1000))
+
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                where_extra = "AND p.canonical_url IS NOT NULL" if only_analyzed else ""
+                cur.execute(
+                    f"""
+                    SELECT
+                        c.id,
+                        c.tag,
+                        c.canonical_url,
+                        c.maps_url,
+                        c.place_id,
+                        c.name,
+                        c.address,
+                        c.lat,
+                        c.lng,
+                        c.google_rating,
+                        c.user_ratings_total,
+                        c.source_query,
+                        c.discovered_at,
+                        c.last_seen_at,
+                        c.last_analyzed_at AS catalog_last_analyzed_at,
+                        c.last_analyze_status,
+                        c.last_error,
+                        p.display_name AS analyzed_display_name,
+                        p.last_overall_score,
+                        p.total_reviews_analyzed,
+                        p.last_analyzed_at AS analyzed_last_analyzed_at
+                    FROM place_catalog c
+                    LEFT JOIN places p
+                        ON p.canonical_url = c.canonical_url
+                    WHERE c.tag = %s
+                      {where_extra}
+                    ORDER BY c.last_seen_at DESC
+                    LIMIT %s
+                    """,
+                    (tag, limit),
+                )
+                rows = cur.fetchall() or []
+                items: List[Dict[str, Any]] = []
+                for row in rows:
+                    d = dict(row)
+                    for k in (
+                        "discovered_at",
+                        "last_seen_at",
+                        "catalog_last_analyzed_at",
+                        "analyzed_last_analyzed_at",
+                    ):
+                        v = d.get(k)
+                        if isinstance(v, datetime):
+                            d[k] = v.astimezone(timezone.utc).isoformat()
+                    d["analysis_available"] = bool(d.get("analyzed_last_analyzed_at"))
+                    items.append(d)
+                return items
+        finally:
+            conn.close()
 
     conn = _get_connection(db_path)
     try:
@@ -438,7 +765,28 @@ def update_catalog_analyze_status(
 ) -> None:
     if not tag or not canonical_url:
         return
-    now = datetime.now(timezone.utc).isoformat()
+    now_dt = datetime.now(timezone.utc)
+
+    if _use_postgres_places():
+        conn = _pg_connect()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE place_catalog
+                    SET last_analyzed_at = %s,
+                        last_analyze_status = %s,
+                        last_error = %s
+                    WHERE tag = %s AND canonical_url = %s
+                    """,
+                    (now_dt, status, error, tag, canonical_url),
+                )
+            conn.commit()
+        finally:
+            conn.close()
+        return
+
+    now = now_dt.isoformat()
     conn = _get_connection(db_path)
     try:
         cur = conn.cursor()
