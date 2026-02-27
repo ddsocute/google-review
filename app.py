@@ -892,8 +892,48 @@ def api_search_places():
             ),
             502,
         )
-    except Exception:
-        return jsonify({"error": "向 Apify 搜尋餐廳時發生未知錯誤，請稍後再試"}), 502
+    except RuntimeError as e:
+        # 目前 apify_client 會在「未設定 APIFY_TOKEN」時 raise RuntimeError，
+        # 這裡把它轉成明確的錯誤訊息，避免前端只看到「未知錯誤」。
+        if "APIFY_TOKEN not set" in str(e):
+            return (
+                jsonify(
+                    {
+                        "error": "伺服器尚未正確設定 Apify API Token，暫時無法使用「用店名找餐廳」功能，請聯繫管理員。",
+                    }
+                ),
+                500,
+            )
+        return (
+            jsonify(
+                {
+                    "error": f"向 Apify 搜尋餐廳時發生錯誤：{str(e)[:80]}",
+                }
+            ),
+            502,
+        )
+    except requests.exceptions.RequestException as e:
+        # 例如 DNS 解析失敗、無法建立連線等非 HTTP 狀態碼錯誤
+        return (
+            jsonify(
+                {
+                    "error": "向 Apify 搜尋餐廳時無法連線到 Apify 服務，請確認伺服器可以連線到 https://api.apify.com。",
+                    "detail": str(e)[:120],
+                }
+            ),
+            502,
+        )
+    except Exception as e:
+        # 其他真正意料之外的錯誤，至少把原因回傳一小段給前端 debug
+        return (
+            jsonify(
+                {
+                    "error": "向 Apify 搜尋餐廳時發生未知錯誤，請稍後再試",
+                    "detail": str(e)[:120],
+                }
+            ),
+            502,
+        )
 
     return jsonify({"query": query, "results": results})
 
@@ -969,9 +1009,42 @@ def api_map_search():
             ),
             502,
         )
+    except RuntimeError as e:
+        if "APIFY_TOKEN not set" in str(e):
+            return (
+                jsonify(
+                    {
+                        "error": "伺服器尚未正確設定 Apify API Token，暫時無法使用地圖搜尋，請聯繫管理員。",
+                    }
+                ),
+                500,
+            )
+        return (
+            jsonify(
+                {
+                    "error": f"向 Apify 搜尋餐廳時發生錯誤：{str(e)[:80]}",
+                }
+            ),
+            502,
+        )
+    except requests.exceptions.RequestException as e:
+        return (
+            jsonify(
+                {
+                    "error": "向 Apify 搜尋餐廳時無法連線到 Apify 服務，請確認伺服器可以連線到 https://api.apify.com。",
+                    "detail": str(e)[:120],
+                }
+            ),
+            502,
+        )
     except Exception as e:
         return (
-            jsonify({"error": f"向 Apify 搜尋餐廳時發生未知錯誤：{str(e)[:80]}"}),
+            jsonify(
+                {
+                    "error": "向 Apify 搜尋餐廳時發生未知錯誤，請稍後再試",
+                    "detail": str(e)[:120],
+                }
+            ),
             502,
         )
 
