@@ -30,152 +30,123 @@
     // Input mode 已改為自動判斷：「像網址的就當 Google Maps 連結，其餘視為店名 / 關鍵字」
     var inputHint = document.getElementById("inputHint");
 
-    // Name-search candidates
+    // Name-search candidates（店名搜尋結果清單）
     var searchResultsPanel = document.getElementById("searchResultsPanel");
     var searchResultsList = document.getElementById("searchResultsList");
     var currentSearchResults = [];
 
-    // Real map preview (Leaflet) for name-search results
-    var placesMapWrap = document.getElementById("placesMapWrap");
-    var placesMapEl = document.getElementById("placesMap");
-    var placesMapSub = document.getElementById("placesMapSub");
-    var placesMapInstance = null;
-    var placesMarkersLayer = null;
-    var lastSearchCenter = null; // {lat, lng} when geolocation is available
-
-    // Place preview info card (Google Maps–like info panel)
-    var placePreview = document.getElementById("placePreview");
-    var placePreviewName = document.getElementById("placePreviewName");
-    var placePreviewMeta = document.getElementById("placePreviewMeta");
-    var placePreviewAddress = document.getElementById("placePreviewAddress");
-    var placePreviewAnalyzeBtn = document.getElementById("placePreviewAnalyzeBtn");
-    var placePreviewMapsBtn = document.getElementById("placePreviewMapsBtn");
+    // 目前被展開的搜尋結果（清單內展開的那一間）
     var selectedPlace = null;
+    var openResultDetail = null;
 
-    function ensurePlacesMap() {
-        if (!placesMapEl || typeof L === "undefined") return false;
-        if (placesMapInstance) return true;
+    // 在清單中的某一列下方產生「高清地圖 + 店家資訊 + 按鈕」區塊
+    function buildInlineDetail(item) {
+        var wrapper = document.createElement("div");
+        wrapper.className = "search-result-detail hidden";
 
-        try {
-            placesMapInstance = L.map(placesMapEl, {
-                zoomControl: true,
-                scrollWheelZoom: false,
-                tap: true,
-            });
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                maxZoom: 19,
-                attribution: "&copy; OpenStreetMap contributors",
-            }).addTo(placesMapInstance);
-            placesMarkersLayer = L.layerGroup().addTo(placesMapInstance);
+        // Map container（使用 Leaflet，將高度調高一點讓畫質更清晰）
+        var mapBox = document.createElement("div");
+        mapBox.className = "search-result-map";
+        mapBox.style.height = "230px";
+        mapBox.style.borderRadius = "16px";
+        mapBox.style.overflow = "hidden";
+        mapBox.style.marginTop = "12px";
+        wrapper.appendChild(mapBox);
 
-            // Default view (Taipei) until we have user location or results
-            placesMapInstance.setView([25.0330, 121.5654], 12);
-            return true;
-        } catch (e) {
-            return false;
-        }
-    }
+        // Info + actions
+        var info = document.createElement("div");
+        info.className = "search-result-detail-info";
 
-    function hidePlacePreview() {
-        selectedPlace = null;
-        if (placePreview) placePreview.classList.add("hidden");
-    }
+        var title = document.createElement("div");
+        title.className = "search-result-detail-title";
+        title.textContent = item.name || "未命名地點";
 
-    function clearPlacesMap() {
-        if (placesMapWrap) placesMapWrap.classList.add("hidden");
-        if (placesMarkersLayer) {
-            try { placesMarkersLayer.clearLayers(); } catch (e) { /* ignore */ }
-        }
-        lastSearchCenter = null;
-        hidePlacePreview();
-    }
-
-    function showPlacePreview(item) {
-        if (!item || !placePreview || !placePreviewName) return;
-        selectedPlace = item;
-
-        var title = item.name || "未命名地點";
-        var addr = item.address || "";
+        var meta = document.createElement("div");
+        meta.className = "search-result-detail-meta";
         var rating = item.rating != null ? (item.rating.toFixed ? item.rating.toFixed(1) : item.rating) : null;
         var total = item.user_ratings_total;
         var parts = [];
         if (rating) parts.push("Google 評分 " + rating + "★");
         if (total != null) parts.push(total + " 則評論");
+        meta.textContent = parts.join(" · ") || "";
 
-        placePreviewName.textContent = title;
-        if (placePreviewMeta) placePreviewMeta.textContent = parts.join(" · ") || "";
-        if (placePreviewAddress) placePreviewAddress.textContent = addr;
+        var addr = document.createElement("div");
+        addr.className = "search-result-detail-address";
+        addr.textContent = item.address || "";
 
-        placePreview.classList.remove("hidden");
+        var actions = document.createElement("div");
+        actions.className = "search-result-detail-actions";
 
-        try {
-            placePreview.scrollIntoView({ behavior: "smooth", block: "center" });
-        } catch (e) {
-            // ignore
-        }
-    }
-
-    function renderPlacesMap(results) {
-        if (!placesMapWrap || !placesMapEl) return;
-        if (!ensurePlacesMap()) return;
-
-        // Only show map when we have at least 1 item with lat/lng
-        var hasGeo = (results || []).some(function (r) {
-            return r && typeof r.lat === "number" && typeof r.lng === "number";
-        });
-        if (!hasGeo) {
-            placesMapWrap.classList.add("hidden");
-            return;
-        }
-
-        placesMapWrap.classList.remove("hidden");
-
-        // Leaflet needs size invalidate when container toggles visibility
-        setTimeout(function () {
-            try { placesMapInstance.invalidateSize(); } catch (e) { /* ignore */ }
-        }, 60);
-
-        try { placesMarkersLayer.clearLayers(); } catch (e) { /* ignore */ }
-
-        var bounds = [];
-
-        // User location marker (optional)
-        if (lastSearchCenter && typeof lastSearchCenter.lat === "number" && typeof lastSearchCenter.lng === "number") {
-            var userMarker = L.circleMarker([lastSearchCenter.lat, lastSearchCenter.lng], {
-                radius: 6,
-                color: "#1a73e8",
-                fillColor: "#1a73e8",
-                fillOpacity: 0.75,
-                weight: 2,
-            }).addTo(placesMarkersLayer);
-            userMarker.bindTooltip("你的位置", { direction: "top", offset: [0, -6] });
-            bounds.push([lastSearchCenter.lat, lastSearchCenter.lng]);
-        }
-
-        (results || []).forEach(function (item) {
-            if (!item || typeof item.lat !== "number" || typeof item.lng !== "number") return;
-
-            var marker = L.marker([item.lat, item.lng]).addTo(placesMarkersLayer);
-            var title = item.name || "未命名地點";
-            var addr = item.address || "";
-            var html = "<div style='font-weight:700;margin-bottom:2px;'>" + title + "</div>";
-            if (addr) html += "<div style='font-size:12px;opacity:.85;'>" + addr + "</div>";
-            marker.bindPopup(html);
-
-            marker.on("click", function () {
-                // Clicking a pin now shows a Google Maps–style info card first
-                showPlacePreview(item);
-            });
-            bounds.push([item.lat, item.lng]);
-        });
-
-        if (bounds.length) {
-            try {
-                placesMapInstance.fitBounds(bounds, { padding: [18, 18] });
-            } catch (e) {
-                // ignore
+        var analyzeBtn = document.createElement("button");
+        analyzeBtn.type = "button";
+        analyzeBtn.className = "btn-preview-analyze";
+        analyzeBtn.textContent = "用這間餐廳開始分析";
+        analyzeBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (item && item.maps_url) {
+                selectedPlace = item;
+                runAnalyze(item.maps_url, item.name || "");
             }
-        }
+        });
+
+        var mapsBtn = document.createElement("button");
+        mapsBtn.type = "button";
+        mapsBtn.className = "btn-preview-maps";
+        mapsBtn.textContent = "在 Google Maps 開啟";
+        mapsBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            if (item && item.maps_url) {
+                window.open(item.maps_url, "_blank");
+            }
+        });
+
+        actions.appendChild(analyzeBtn);
+        actions.appendChild(mapsBtn);
+
+        info.appendChild(title);
+        if (meta.textContent) info.appendChild(meta);
+        if (addr.textContent) info.appendChild(addr);
+        info.appendChild(actions);
+
+        wrapper.appendChild(info);
+
+        // 懶載入 Leaflet 地圖，只有真的展開時才初始化，並調高 zoom 讓畫面更清楚
+        wrapper._ensureMap = function ensureInlineMap() {
+            if (wrapper._leafletMap || typeof L === "undefined") return;
+            if (!item || typeof item.lat !== "number" || typeof item.lng !== "number") {
+                mapBox.textContent = "此店家暫無可顯示的地圖座標";
+                mapBox.style.display = "flex";
+                mapBox.style.alignItems = "center";
+                mapBox.style.justifyContent = "center";
+                mapBox.style.fontSize = "13px";
+                mapBox.style.color = "#666";
+                return;
+            }
+            try {
+                var map = L.map(mapBox, {
+                    zoomControl: true,
+                    scrollWheelZoom: false,
+                    tap: true,
+                });
+                L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                    maxZoom: 19,
+                    attribution: "&copy; OpenStreetMap contributors",
+                }).addTo(map);
+                var lat = Number(item.lat);
+                var lng = Number(item.lng);
+                L.marker([lat, lng]).addTo(map);
+                map.setView([lat, lng], 17);
+                // 等容器展開後重新計算大小，避免模糊
+                setTimeout(function () {
+                    try { map.invalidateSize(); } catch (e) { /* ignore */ }
+                }, 60);
+                wrapper._leafletMap = map;
+            } catch (e) {
+                // ignore map error, 至少其他資訊仍可顯示
+            }
+        };
+
+        return wrapper;
     }
 
     // ---------------------------------------------------------------------------
@@ -344,7 +315,10 @@
         currentSearchResults = [];
         if (searchResultsList) searchResultsList.innerHTML = "";
         if (searchResultsPanel) searchResultsPanel.classList.add("hidden");
-        clearPlacesMap();
+        selectedPlace = null;
+        if (openResultDetail) {
+            openResultDetail = null;
+        }
     }
 
     function renderSearchResults(list) {
@@ -365,25 +339,32 @@
             var row = document.createElement("button");
             row.type = "button";
             row.className = "search-result-item";
+            var detail = buildInlineDetail(item);
+
             row.addEventListener("click", function () {
-                // 點同一個店家：收合目前展開的資訊卡；點不同店家：展開資訊卡
-                var samePlace = false;
-                if (selectedPlace && item) {
-                    if (selectedPlace.place_id && item.place_id && selectedPlace.place_id === item.place_id) {
-                        samePlace = true;
-                    } else if (selectedPlace.maps_url && item.maps_url && selectedPlace.maps_url === item.maps_url) {
-                        samePlace = true;
-                    } else if (!selectedPlace.place_id && !item.place_id && selectedPlace.name && item.name && selectedPlace.name === item.name) {
-                        samePlace = true;
-                    }
+                // 第二次點同一間：收合展開區塊；點別間：關掉舊的、在該列下展開新內容
+                if (openResultDetail === detail) {
+                    detail.classList.add("hidden");
+                    openResultDetail = null;
+                    selectedPlace = null;
+                    return;
                 }
 
-                if (samePlace) {
-                    // 再次點擊相同店家：收起剛剛展開的資訊
-                    hidePlacePreview();
-                } else {
-                    // 選擇列表中的店家時，先在下方展開資訊卡與高清地圖，由使用者決定是否開始分析
-                    showPlacePreview(item);
+                if (openResultDetail && openResultDetail !== detail) {
+                    openResultDetail.classList.add("hidden");
+                }
+
+                selectedPlace = item;
+                openResultDetail = detail;
+                detail.classList.remove("hidden");
+                if (typeof detail._ensureMap === "function") {
+                    detail._ensureMap();
+                }
+
+                try {
+                    detail.scrollIntoView({ behavior: "smooth", block: "nearest" });
+                } catch (e) {
+                    // ignore
                 }
             });
 
@@ -408,12 +389,10 @@
             if (addr.textContent) row.appendChild(addr);
             if (meta.textContent) row.appendChild(meta);
             searchResultsList.appendChild(row);
+            searchResultsList.appendChild(detail);
         });
 
         searchResultsPanel.classList.remove("hidden");
-
-        // Also show results on the real map (if coordinates are available)
-        renderPlacesMap(currentSearchResults);
     }
 
     // ---------------------------------------------------------------------------
@@ -1324,18 +1303,7 @@
 
         // 優先嘗試取得使用者所在位置，幫忙把最近的分店排在前面；
         // 若使用者拒絕或瀏覽器不支援，就退回純文字搜尋。
-            function doSearch(payload) {
-            // Keep the last geolocation center (best-effort) for map preview
-            try {
-                if (payload && payload.user_lat != null && payload.user_lng != null) {
-                    lastSearchCenter = { lat: Number(payload.user_lat), lng: Number(payload.user_lng) };
-                } else {
-                    lastSearchCenter = null;
-                }
-            } catch (e) {
-                lastSearchCenter = null;
-            }
-
+        function doSearch(payload) {
             fetch("/api/search_places", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -1363,9 +1331,9 @@
 
         var basePayload = { query: raw, limit: 6 };
 
-            // 這裡改成「完全不抓使用者定位」：一律用你輸入的文字去找店，
-            // 再由你從列表中選擇正確的分店。
-            doSearch(basePayload);
+        // 這裡改成「完全不抓使用者定位」：一律用你輸入的文字去找店，
+        // 再由你從列表中選擇正確的分店。
+        doSearch(basePayload);
     }
 
     // ---------------------------------------------------------------------------
@@ -1387,25 +1355,6 @@
     // 不再使用你的定位，只用你輸入的文字來找店。
     if (urlInput && inputHint) {
         inputHint.textContent = "支援貼上 Google Maps 網址與店名搜尋：貼網址會直接開始分析，輸入店名會先列出店家資訊卡，讓你確認後再開始分析。";
-    }
-
-    // 綁定店家資訊卡上的按鈕：開始分析 / 在 Google Maps 開啟
-    if (placePreviewAnalyzeBtn) {
-        placePreviewAnalyzeBtn.addEventListener("click", function () {
-            if (selectedPlace && selectedPlace.maps_url) {
-                runAnalyze(selectedPlace.maps_url, selectedPlace.name || "");
-                clearSearchResults();
-                hidePlacePreview();
-            }
-        });
-    }
-
-    if (placePreviewMapsBtn) {
-        placePreviewMapsBtn.addEventListener("click", function () {
-            if (selectedPlace && selectedPlace.maps_url) {
-                window.open(selectedPlace.maps_url, "_blank");
-            }
-        });
     }
 
     // ---------------------------------------------------------------------------
