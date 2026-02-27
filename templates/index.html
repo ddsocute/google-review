@@ -81,26 +81,11 @@
                             <span class="btn-loader" aria-hidden="true"></span>
                         </button>
                     </div>
-                    <div class="input-mode-toggle">
-                        <button class="input-mode-btn active" data-mode="url" id="modeUrl">
-                            貼上連結
-                        </button>
-                        <button class="input-mode-btn" data-mode="name" id="modeName">
-                            用店名找餐廳
-                        </button>
-                    </div>
-                    <div class="model-toggle">
-                        <button class="model-btn active" data-model="gemini-3-flash-preview" id="modelFlash">
-                            快速模式
-                        </button>
-                        <button class="model-btn" data-model="gemini-3-pro-preview" id="modelPro">
-                            完整模式
-                        </button>
-                    </div>
-                    <p class="input-hint" id="inputHint">支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...</p>
+                    <!-- 模式已改為自動判斷：像網址的就當 Google Maps 連結，其餘視為店名搜尋（會盡量以你所在位置推薦最近的分店） -->
+                    <p class="input-hint" id="inputHint">可直接貼上 Google Maps 餐廳連結，或只輸入店名，系統會用你所在位置幫你找最近的分店。</p>
 
-                    <!-- Mobile map-style shell: fake map + bottom sheet for status -->
-                    <section class="mobile-map-shell" aria-label="店家位置與摘要（模擬地圖介面）">
+                    <!-- Mobile map-style shell: fake map + bottom sheet for status（分析完成後才顯示） -->
+                    <section class="mobile-map-shell hidden" aria-label="店家位置與摘要（模擬地圖介面）">
                         <div class="mobile-map-fake" id="mobileMapFake">
                             <div class="mobile-map-grid"></div>
                             <div class="mobile-map-pin"></div>

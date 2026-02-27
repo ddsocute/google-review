@@ -694,8 +694,10 @@ def api_analyze():
     """Main analysis endpoint."""
     body = request.get_json(force=True)
     url = (body.get("url") or "").strip()
-    model = body.get("model", "gemini-3-flash-preview")
-    mode = "deep" if model == "gemini-3-pro-preview" else "quick"
+    # 目前僅提供「快速模式」，後端一律使用單一模型與較小抓取量，
+    # 不再區分 quick / deep 或讓前端指定不同模型。
+    model = "gemini-3-flash-preview"
+    mode = "quick"
 
     if not url:
         return jsonify({"error": "請提供 Google Maps 餐廳連結"}), 400
@@ -738,11 +740,8 @@ def api_analyze():
 
     # --- Step 1: Scrape reviews ---
     try:
-        # quick 模式少抓一點評論以提高速度，deep 模式抓比較多評論
-        if mode == "deep":
-            max_reviews = MAX_SCRAPE_REVIEWS
-        else:
-            max_reviews = min(MAX_SCRAPE_REVIEWS, 60)
+        # 只保留快速模式：限制抓取評論數量以提高速度與穩定性
+        max_reviews = min(MAX_SCRAPE_REVIEWS, 60)
 
         reviews_data = apify_scrape_reviews(
             canonical_url,
@@ -772,8 +771,6 @@ def api_analyze():
     try:
         analysis = analyse_reviews(reviews_data, model=model)
     except requests.exceptions.Timeout:
-        if model == "gemini-3-pro-preview":
-            return jsonify({"error": "完整模式 AI 分析逾時（Pro 模型回應較慢），請改用「快速模式」或稍後再試"}), 504
         return jsonify({"error": "AI 分析逾時，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
         status = e.response.status_code if e.response else 0
@@ -827,6 +824,9 @@ def api_search_places():
     """
     body = request.get_json(force=True) or {}
     query = (body.get("query") or "").strip()
+    # 前端若有傳入使用者大致座標，優先交給 Apify 做「就近」排序
+    user_lat = body.get("user_lat")
+    user_lng = body.get("user_lng")
     try:
         limit = int(body.get("limit") or 6)
     except (ValueError, TypeError):
@@ -847,9 +847,25 @@ def api_search_places():
             500,
         )
 
+    # 準備額外的搜尋參數：若有使用者座標，就讓 Apify 以此為中心搜尋，
+    # 這樣輸入「鼎泰豐」也能優先顯示最近的分店。
+    extra_params = {}
     try:
-        # 舊前端只需要基本清單，因此維持預設（不含經緯度）
-        results = apify_search_places(query=query, limit=limit, language="zh-TW")
+        if user_lat is not None and user_lng is not None:
+            extra_params["with_location"] = True
+            extra_params["location_lat"] = float(user_lat)
+            extra_params["location_lng"] = float(user_lng)
+    except (ValueError, TypeError):
+        # 座標異常就當沒傳，不影響正常搜尋
+        extra_params = {}
+
+    try:
+        results = apify_search_places(
+            query=query,
+            limit=limit,
+            language="zh-TW",
+            **extra_params,
+        )
     except requests.exceptions.Timeout:
         return jsonify({"error": "向 Apify 搜尋餐廳逾時，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
@@ -858,6 +874,16 @@ def api_search_places():
             return jsonify({"error": "Apify API Token 已失效，請聯繫管理員"}), 502
         if status == 429:
             return jsonify({"error": "Apify API 額度已用完，請稍後再試或聯繫管理員"}), 429
+        if status == 0:
+            # 這通常代表本機或主機端無法順利連線到 Apify（例如網路被擋、防火牆或 DNS 問題）
+            return (
+                jsonify(
+                    {
+                        "error": "向 Apify 搜尋餐廳時發生錯誤 (HTTP 0)，可能是無法連線到 Apify 服務，請確認主機可以正常連到 https://api.apify.com。",
+                    }
+                ),
+                502,
+            )
         return (
             jsonify(
                 {

@@ -27,9 +27,7 @@
     var radarChartInstance = null;
     var trendChartInstance = null;
 
-    // Input mode: 'url' (default) or 'name'
-    var inputMode = "url";
-    var inputModeButtons = document.querySelectorAll(".input-mode-btn");
+    // Input mode 已改為自動判斷：「像網址的就當 Google Maps 連結，其餘視為店名 / 關鍵字」
     var inputHint = document.getElementById("inputHint");
 
     // Name-search candidates
@@ -109,16 +107,9 @@
     }
 
     // ---------------------------------------------------------------------------
-    // Model toggle
+    // Model toggle（僅保留快速模式，後端也只跑一種模型）
     // ---------------------------------------------------------------------------
     var selectedModel = "gemini-3-flash-preview";
-    document.querySelectorAll(".model-btn").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-            document.querySelectorAll(".model-btn").forEach(function (b) { b.classList.remove("active"); });
-            btn.classList.add("active");
-            selectedModel = btn.getAttribute("data-model");
-        });
-    });
 
     // ---------------------------------------------------------------------------
     // URL validation (client-side)
@@ -163,6 +154,15 @@
         urlInput.value = "";
         urlInput.focus();
         hideHistoryDropdown();
+        // 回到初始狀態時隱藏手機版「地圖殼」
+        try {
+            var mapShell = document.querySelector(".mobile-map-shell");
+            if (mapShell) {
+                mapShell.classList.add("hidden");
+            }
+        } catch (e) {
+            // ignore
+        }
     };
 
     window.retryAnalysis = function () {
@@ -284,6 +284,16 @@
             "已分析 " + analyzedCount + " 則評論";
         document.getElementById("restaurantIntro").textContent =
             data.restaurant_intro || data.dining_tips || "暫無餐廳介紹資訊。";
+
+        // 分析完成後才顯示手機版「地圖殼」區塊
+        try {
+            var mapShell = document.querySelector(".mobile-map-shell");
+            if (mapShell) {
+                mapShell.classList.remove("hidden");
+            }
+        } catch (e) {
+            // ignore
+        }
 
         // Update mobile Google Maps–style fake map summary
         try {
@@ -1052,6 +1062,15 @@
         hide(document.getElementById("fakeReviewSection"));
         hide(document.getElementById("foodPhotoSection"));
         clearSearchResults();
+        // 新一次分析開始前，避免顯示上一間店的地圖卡片
+        try {
+            var mapShell = document.querySelector(".mobile-map-shell");
+            if (mapShell) {
+                mapShell.classList.add("hidden");
+            }
+        } catch (e) {
+            // ignore
+        }
         show(loadingSection);
         show(skeletonSection);
         setStep(1);
@@ -1125,21 +1144,29 @@
             return;
         }
 
-        // 「用店名找餐廳」模式：先叫後端找候選，再讓使用者選哪一間
-        if (inputMode === "name") {
-            analyzeBtn.classList.add("loading");
-            analyzeBtn.disabled = true;
-            hide(errorSection);
-            hide(resultsSection);
-            hide(loadingSection);
-            hide(skeletonSection);
+        // 先判斷是不是看起來像 Google Maps 連結，是的話直接走網址分析
+        if (isValidUrl(raw)) {
+            runAnalyze(raw);
+            return;
+        }
 
-            clearSearchResults();
+        // 其餘情況一律視為「店名 / 關鍵字」
+        analyzeBtn.classList.add("loading");
+        analyzeBtn.disabled = true;
+        hide(errorSection);
+        hide(resultsSection);
+        hide(loadingSection);
+        hide(skeletonSection);
 
+        clearSearchResults();
+
+        // 優先嘗試取得使用者所在位置，幫忙把最近的分店排在前面；
+        // 若使用者拒絕或瀏覽器不支援，就退回純文字搜尋。
+        function doSearch(payload) {
             fetch("/api/search_places", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ query: raw, limit: 6 }),
+                body: JSON.stringify(payload),
             })
                 .then(function (res) {
                     if (!res.ok) {
@@ -1159,17 +1186,41 @@
                     analyzeBtn.disabled = false;
                     showError(err.message || "搜尋餐廳失敗，請稍後再試");
                 });
+        }
+
+        var basePayload = { query: raw, limit: 6 };
+
+        if (!navigator.geolocation) {
+            doSearch(basePayload);
             return;
         }
 
-        // URL 模式：直接檢查格式後送出分析
-        var url = raw;
-        if (!isValidUrl(url)) {
-            showError("網址格式不正確, 請貼上 Google Maps 餐廳連結.");
-            return;
-        }
+        var geoTimeout = setTimeout(function () {
+            // 定位太久就直接走純文字搜尋，避免卡住使用者
+            doSearch(basePayload);
+        }, 3000);
 
-        runAnalyze(url);
+        navigator.geolocation.getCurrentPosition(
+            function (pos) {
+                clearTimeout(geoTimeout);
+                var coords = pos.coords || {};
+                doSearch({
+                    query: raw,
+                    limit: 6,
+                    user_lat: coords.latitude,
+                    user_lng: coords.longitude,
+                });
+            },
+            function () {
+                clearTimeout(geoTimeout);
+                doSearch(basePayload);
+            },
+            {
+                enableHighAccuracy: false,
+                timeout: 2500,
+                maximumAge: 600000, // 可接受 10 分鐘內的快取定位
+            }
+        );
     }
 
     // ---------------------------------------------------------------------------
@@ -1187,32 +1238,10 @@
         setTimeout(hideHistoryDropdown, 180);
     });
 
-    // Input mode toggle (URL vs Name)
-    if (inputModeButtons && inputModeButtons.length) {
-        inputModeButtons.forEach(function (btn) {
-            btn.addEventListener("click", function () {
-                var mode = btn.getAttribute("data-mode") || "url";
-                inputMode = mode;
-                inputModeButtons.forEach(function (b) { b.classList.remove("active"); });
-                btn.classList.add("active");
-
-                if (mode === "name") {
-                    urlInput.placeholder = "輸入餐廳名稱或關鍵字，例如「鼎泰豐 信義」";
-                    if (inputHint) {
-                        inputHint.textContent = "用店名找餐廳：會用 Google Maps 搜尋，幫你挑出最符合的一間再做評論分析。";
-                    }
-                } else {
-                    urlInput.placeholder = "貼上 Google Maps 餐廳連結...";
-                    if (inputHint) {
-                        inputHint.textContent = "支援格式：google.com/maps/place/... 或 maps.app.goo.gl/...";
-                    }
-                }
-
-                urlInput.value = "";
-                urlInput.focus();
-                clearSearchResults();
-            });
-        });
+    // 輸入模式已改為自動判斷：像網址的就當 Google Maps 連結，
+    // 其餘視為店名，會盡量以你目前所在位置推薦最近的分店。
+    if (urlInput && inputHint) {
+        inputHint.textContent = "可直接貼上 Google Maps 餐廳連結，或只輸入店名，系統會用你所在位置幫你找最近的分店。";
     }
 
     // ---------------------------------------------------------------------------
