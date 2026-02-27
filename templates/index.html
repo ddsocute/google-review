@@ -81,7 +81,7 @@
                             type="url"
                             id="urlInput"
                             class="url-input"
-                            placeholder="貼上 Google Maps 餐廳連結..."
+                            placeholder="支援貼上 Google Maps 網址，或輸入店名搜尋"
                             autocomplete="off"
                         >
                         <button id="analyzeBtn" class="btn-analyze" type="button">
@@ -121,9 +121,27 @@
                     <div id="placesMapWrap" class="places-map-wrap hidden" aria-label="搜尋結果地圖預覽">
                         <div class="places-map-header">
                             <div class="places-map-title">地圖</div>
-                            <div class="places-map-sub" id="placesMapSub">你可以點地圖上的圖釘，直接選擇要分析的餐廳。</div>
+                            <div class="places-map-sub" id="placesMapSub">點地圖上的圖釘可以先看店家資訊，再決定要不要開始分析。</div>
                         </div>
                         <div id="placesMap" class="places-map" role="application" aria-label="地圖"></div>
+                    </div>
+                    <!-- Place preview card, similar to a Google Maps info card -->
+                    <div id="placePreview" class="place-preview hidden" aria-label="店家資訊預覽">
+                        <div class="place-preview-main">
+                            <div class="place-preview-text">
+                                <div id="placePreviewName" class="place-preview-name">餐廳名稱</div>
+                                <div id="placePreviewMeta" class="place-preview-meta">Google 評分 · 評論數</div>
+                                <div id="placePreviewAddress" class="place-preview-address">地址</div>
+                            </div>
+                            <div class="place-preview-actions">
+                                <button id="placePreviewAnalyzeBtn" type="button" class="btn-preview-analyze">
+                                    用這間餐廳開始分析
+                                </button>
+                                <button id="placePreviewMapsBtn" type="button" class="btn-preview-maps">
+                                    在 Google Maps 開啟
+                                </button>
+                            </div>
+                        </div>
                     </div>
                     <div id="searchResultsPanel" class="search-results hidden">
                         <div class="search-results-header">請選擇你要分析的餐廳：</div>
