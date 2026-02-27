@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import requests
 
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or ""
+APIFY_TOKEN = (os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or "").strip()
 MAX_SCRAPE_REVIEWS_DEFAULT = int(os.getenv("MAX_SCRAPE_REVIEWS", "90"))
 
 # 可以透過環境變數覆寫 Apify Actor ID，預設使用官方 Compass Reviews Scraper 與
@@ -15,7 +15,7 @@ APIFY_REVIEWS_ACTOR_ID = os.getenv(
 )
 APIFY_PLACES_ACTOR_ID = os.getenv(
     "APIFY_PLACES_ACTOR_ID",
-    "futurizerush~google-maps-scraper-zh-tw",
+    "compass~crawler-google-places",
 )
 
 
@@ -29,11 +29,14 @@ def _get_apify_token() -> str:
       必須在每次呼叫時再從環境變數補抓一次，避免永遠是空字串。
     - 部分主機可能使用 `APIFY_API_TOKEN` 這個名稱，所以也一併支援。
     """
-    return (
+    token = (
         APIFY_TOKEN
         or os.getenv("APIFY_TOKEN", "")
         or os.getenv("APIFY_API_TOKEN", "")
     )
+    # Guard against accidental whitespace (e.g. copy/paste with trailing newline),
+    # which Apify treats as "token not provided".
+    return (token or "").strip()
 
 
 def _apify_run_actor(actor_id: str, payload: Dict[str, Any], timeout: int = 300):
@@ -98,6 +101,8 @@ def search_places_by_text(
     language: str = "zh-TW",
     *,
     with_location: bool = False,
+    location_lat: Optional[float] = None,
+    location_lng: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     """
     使用 Apify 的 Google Maps 商家爬蟲依「店名 / 關鍵字」搜尋店家清單。
@@ -118,17 +123,27 @@ def search_places_by_text(
     if not _get_apify_token():
         raise RuntimeError("APIFY_TOKEN not set")
 
-    # Apify 官方文件使用的欄位名稱為 searchQueries，這裡僅搜尋單一關鍵字。
+    # 使用 Compass `crawler-google-places` 的輸入格式：
+    # - searchStringsArray: 搜尋字串陣列
+    # - maxCrawledPlacesPerSearch: 每個搜尋字串最多回傳幾筆店家
+    # - language: 結果語系
     payload = {
-        "searchQueries": [query],
-        "maxResults": max(limit, 1),
+        "searchStringsArray": [query],
+        "maxCrawledPlacesPerSearch": max(limit, 1),
         "language": language,
-        # 我們只需要店家清單，不需要額外撈 email/網站，以節省成本與時間
-        "scrapeReviews": False,
-        "scrapeEmails": False,
     }
 
     raw_items = _apify_run_actor(APIFY_PLACES_ACTOR_ID, payload, timeout=300)
+
+    def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        # Minimal dependency: compute distance for sorting nearby branches when user shares location.
+        from math import asin, cos, radians, sin, sqrt
+
+        r = 6371.0
+        dlat = radians(lat2 - lat1)
+        dlon = radians(lon2 - lon1)
+        a = sin(dlat / 2) ** 2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon / 2) ** 2
+        return 2 * r * asin(sqrt(a))
 
     results: List[Dict[str, Any]] = []
     for item in raw_items[:limit]:
@@ -175,6 +190,13 @@ def search_places_by_text(
             if isinstance(item.get(lng_key), (int, float)):
                 lng = float(item[lng_key])
                 break
+        # Common schema: nested {"location": {"lat": ..., "lng": ...}}
+        if (lat is None or lng is None) and isinstance(item.get("location"), dict):
+            loc = item.get("location") or {}
+            if lat is None and isinstance(loc.get("lat"), (int, float)):
+                lat = float(loc["lat"])
+            if lng is None and isinstance(loc.get("lng"), (int, float)):
+                lng = float(loc["lng"])
 
         results.append(
             {
@@ -184,8 +206,25 @@ def search_places_by_text(
                 "rating": rating,
                 "user_ratings_total": user_ratings_total,
                 "maps_url": maps_url,
+                "lat": lat,
+                "lng": lng,
             }
         )
+
+    # If caller provided user location, sort by distance (best-effort).
+    # We DO NOT rely on actor-specific geo-input schema here; we only use location to sort results
+    # when the actor happened to return coordinates.
+    if with_location and location_lat is not None and location_lng is not None:
+        try:
+            clat = float(location_lat)
+            clng = float(location_lng)
+            results.sort(
+                key=lambda r: _haversine_km(clat, clng, r["lat"], r["lng"])
+                if isinstance(r.get("lat"), (int, float)) and isinstance(r.get("lng"), (int, float))
+                else 10**9
+            )
+        except Exception:
+            pass
 
     return results
 

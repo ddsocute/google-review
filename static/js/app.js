@@ -35,6 +35,112 @@
     var searchResultsList = document.getElementById("searchResultsList");
     var currentSearchResults = [];
 
+    // Real map preview (Leaflet) for name-search results
+    var placesMapWrap = document.getElementById("placesMapWrap");
+    var placesMapEl = document.getElementById("placesMap");
+    var placesMapSub = document.getElementById("placesMapSub");
+    var placesMapInstance = null;
+    var placesMarkersLayer = null;
+    var lastSearchCenter = null; // {lat, lng} when geolocation is available
+
+    function ensurePlacesMap() {
+        if (!placesMapEl || typeof L === "undefined") return false;
+        if (placesMapInstance) return true;
+
+        try {
+            placesMapInstance = L.map(placesMapEl, {
+                zoomControl: true,
+                scrollWheelZoom: false,
+                tap: true,
+            });
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                maxZoom: 19,
+                attribution: "&copy; OpenStreetMap contributors",
+            }).addTo(placesMapInstance);
+            placesMarkersLayer = L.layerGroup().addTo(placesMapInstance);
+
+            // Default view (Taipei) until we have user location or results
+            placesMapInstance.setView([25.0330, 121.5654], 12);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function clearPlacesMap() {
+        if (placesMapWrap) placesMapWrap.classList.add("hidden");
+        if (placesMarkersLayer) {
+            try { placesMarkersLayer.clearLayers(); } catch (e) { /* ignore */ }
+        }
+        lastSearchCenter = null;
+    }
+
+    function renderPlacesMap(results) {
+        if (!placesMapWrap || !placesMapEl) return;
+        if (!ensurePlacesMap()) return;
+
+        // Only show map when we have at least 1 item with lat/lng
+        var hasGeo = (results || []).some(function (r) {
+            return r && typeof r.lat === "number" && typeof r.lng === "number";
+        });
+        if (!hasGeo) {
+            placesMapWrap.classList.add("hidden");
+            return;
+        }
+
+        placesMapWrap.classList.remove("hidden");
+
+        // Leaflet needs size invalidate when container toggles visibility
+        setTimeout(function () {
+            try { placesMapInstance.invalidateSize(); } catch (e) { /* ignore */ }
+        }, 60);
+
+        try { placesMarkersLayer.clearLayers(); } catch (e) { /* ignore */ }
+
+        var bounds = [];
+
+        // User location marker (optional)
+        if (lastSearchCenter && typeof lastSearchCenter.lat === "number" && typeof lastSearchCenter.lng === "number") {
+            var userMarker = L.circleMarker([lastSearchCenter.lat, lastSearchCenter.lng], {
+                radius: 6,
+                color: "#1a73e8",
+                fillColor: "#1a73e8",
+                fillOpacity: 0.75,
+                weight: 2,
+            }).addTo(placesMarkersLayer);
+            userMarker.bindTooltip("你的位置", { direction: "top", offset: [0, -6] });
+            bounds.push([lastSearchCenter.lat, lastSearchCenter.lng]);
+        }
+
+        (results || []).forEach(function (item) {
+            if (!item || typeof item.lat !== "number" || typeof item.lng !== "number") return;
+
+            var marker = L.marker([item.lat, item.lng]).addTo(placesMarkersLayer);
+            var title = item.name || "未命名地點";
+            var addr = item.address || "";
+            var html = "<div style='font-weight:700;margin-bottom:2px;'>" + title + "</div>";
+            if (addr) html += "<div style='font-size:12px;opacity:.85;'>" + addr + "</div>";
+            marker.bindPopup(html);
+
+            marker.on("click", function () {
+                // Clicking a pin = choose this place to analyze
+                if (item.maps_url) {
+                    runAnalyze(item.maps_url, item.name || "");
+                    clearSearchResults();
+                }
+            });
+            bounds.push([item.lat, item.lng]);
+        });
+
+        if (bounds.length) {
+            try {
+                placesMapInstance.fitBounds(bounds, { padding: [18, 18] });
+            } catch (e) {
+                // ignore
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------------
     // Search History (localStorage)
     // ---------------------------------------------------------------------------
@@ -201,6 +307,7 @@
         currentSearchResults = [];
         if (searchResultsList) searchResultsList.innerHTML = "";
         if (searchResultsPanel) searchResultsPanel.classList.add("hidden");
+        clearPlacesMap();
     }
 
     function renderSearchResults(list) {
@@ -252,6 +359,9 @@
         });
 
         searchResultsPanel.classList.remove("hidden");
+
+        // Also show results on the real map (if coordinates are available)
+        renderPlacesMap(currentSearchResults);
     }
 
     // ---------------------------------------------------------------------------
@@ -1163,6 +1273,17 @@
         // 優先嘗試取得使用者所在位置，幫忙把最近的分店排在前面；
         // 若使用者拒絕或瀏覽器不支援，就退回純文字搜尋。
         function doSearch(payload) {
+            // Keep the last geolocation center (best-effort) for map preview
+            try {
+                if (payload && payload.user_lat != null && payload.user_lng != null) {
+                    lastSearchCenter = { lat: Number(payload.user_lat), lng: Number(payload.user_lng) };
+                } else {
+                    lastSearchCenter = null;
+                }
+            } catch (e) {
+                lastSearchCenter = null;
+            }
+
             fetch("/api/search_places", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },

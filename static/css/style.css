@@ -492,6 +492,49 @@ body.sidebar-collapsed .sidebar {
 }
 
 /* ---------- Name-search results panel ---------- */
+.places-map-wrap {
+    margin-top: 14px;
+    background: var(--bg-white);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    text-align: left;
+    max-width: 640px;
+    margin-left: auto;
+    margin-right: auto;
+    overflow: hidden;
+}
+
+.places-map-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.places-map-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 0.06em;
+}
+
+.places-map-sub {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.places-map {
+    height: 300px;
+    width: 100%;
+    background: #eee;
+}
+
+.places-map .leaflet-container {
+    font-family: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+
 .search-results {
     margin-top: 14px;
     background: var(--bg-white);

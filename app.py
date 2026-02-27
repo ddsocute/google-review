@@ -27,7 +27,12 @@ init_db()
 init_place_db()
 app.register_blueprint(api_tasks_bp)
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or ""
+def get_apify_token() -> str:
+    """Get Apify token from env, stripping whitespace."""
+    return (os.getenv("APIFY_TOKEN") or os.getenv("APIFY_API_TOKEN") or "").strip()
+
+
+APIFY_TOKEN = get_apify_token()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.viviai.cc/v1")
 
@@ -837,7 +842,7 @@ def api_search_places():
         return jsonify({"error": "請輸入餐廳名稱或關鍵字"}), 400
 
     # 「用店名找餐廳」改由 Apify 實作，因此這裡確認 APIFY_TOKEN 是否已設定
-    if not APIFY_TOKEN:
+    if not get_apify_token():
         return (
             jsonify(
                 {
@@ -880,6 +885,7 @@ def api_search_places():
                 jsonify(
                     {
                         "error": "向 Apify 搜尋餐廳時發生錯誤 (HTTP 0)，可能是無法連線到 Apify 服務，請確認主機可以正常連到 https://api.apify.com。",
+                        "detail": str(e)[:200],
                     }
                 ),
                 502,
@@ -967,6 +973,8 @@ def api_map_search():
     """
     body = request.get_json(force=True) or {}
     query = (body.get("query") or "").strip()
+    user_lat = body.get("user_lat")
+    user_lng = body.get("user_lng")
     try:
         limit = int(body.get("limit") or 30)
     except (ValueError, TypeError):
@@ -976,7 +984,7 @@ def api_map_search():
     if not query:
         return jsonify({"error": "請輸入搜尋關鍵字"}), 400
 
-    if not APIFY_TOKEN:
+    if not get_apify_token():
         return (
             jsonify(
                 {
@@ -987,12 +995,19 @@ def api_map_search():
         )
 
     try:
-        items = apify_search_places(
-            query=query,
-            limit=limit,
-            language="zh-TW",
-            with_location=True,
-        )
+        extra_params = {}
+        try:
+            if user_lat is not None and user_lng is not None:
+                extra_params["with_location"] = True
+                extra_params["location_lat"] = float(user_lat)
+                extra_params["location_lng"] = float(user_lng)
+        except (ValueError, TypeError):
+            extra_params = {"with_location": True}
+
+        if "with_location" not in extra_params:
+            extra_params["with_location"] = True
+
+        items = apify_search_places(query=query, limit=limit, language="zh-TW", **extra_params)
     except requests.exceptions.Timeout:
         return jsonify({"error": "向 Apify 搜尋餐廳逾時，請稍後再試"}), 504
     except requests.exceptions.HTTPError as e:
@@ -1001,6 +1016,16 @@ def api_map_search():
             return jsonify({"error": "Apify API Token 已失效，請聯繫管理員"}), 502
         if status == 429:
             return jsonify({"error": "Apify API 額度已用完，請稍後再試或聯繫管理員"}), 429
+        if status == 0:
+            return (
+                jsonify(
+                    {
+                        "error": "向 Apify 搜尋餐廳時發生錯誤 (HTTP 0)，可能是無法連線到 Apify 服務，請確認主機可以正常連到 https://api.apify.com。",
+                        "detail": str(e)[:200],
+                    }
+                ),
+                502,
+            )
         return (
             jsonify(
                 {

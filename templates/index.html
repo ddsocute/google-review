@@ -17,6 +17,14 @@
 
     <link rel="stylesheet" href="/static/css/style.css?v=20260228">
 
+    <!-- Leaflet (OpenStreetMap) for real map pins -->
+    <link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+    >
+
     <!-- Open Graph / Social -->
     <meta property="og:title" content="食神｜Google Maps 餐廳評論洞察儀表板">
     <meta property="og:description" content="貼上餐廳的 Google Maps 連結，食神幫你讀完所有評論，整理成一目了然的評論分析報告。">
@@ -109,6 +117,14 @@
                     </section>
 
                     <!-- Name-search results (only used in 用店名找餐廳 模式) -->
+                    <!-- Real map preview for name-search results -->
+                    <div id="placesMapWrap" class="places-map-wrap hidden" aria-label="搜尋結果地圖預覽">
+                        <div class="places-map-header">
+                            <div class="places-map-title">地圖</div>
+                            <div class="places-map-sub" id="placesMapSub">你可以點地圖上的圖釘，直接選擇要分析的餐廳。</div>
+                        </div>
+                        <div id="placesMap" class="places-map" role="application" aria-label="地圖"></div>
+                    </div>
                     <div id="searchResultsPanel" class="search-results hidden">
                         <div class="search-results-header">請選擇你要分析的餐廳：</div>
                         <div id="searchResultsList" class="search-results-list"></div>
@@ -556,6 +572,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script
+    src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+></script>
 <script>
 // Dev-mode safety: if a legacy Service Worker is still registered from previous PWA experiments,
 // it may serve stale cached HTML/CSS/JS and block you from seeing latest changes.
