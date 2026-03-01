@@ -1449,6 +1449,7 @@
     var navButtons = document.querySelectorAll(".nav-item");
     var pages = {
         home: document.getElementById("page-home"),
+        "view-place": document.getElementById("page-view-place"),
         sample: document.getElementById("page-sample"),
         about: document.getElementById("page-about"),
         legal: document.getElementById("page-legal"),
@@ -1475,6 +1476,198 @@
                     closeSidebar();
                 }
             });
+        });
+    }
+
+    // ---------------------------------------------------------------------------
+    // View Place Details Page
+    // ---------------------------------------------------------------------------
+    var placeUrlInput = document.getElementById("placeUrlInput");
+    var viewPlaceBtn = document.getElementById("viewPlaceBtn");
+    var placeLoadingSection = document.getElementById("placeLoadingSection");
+    var placeErrorSection = document.getElementById("placeErrorSection");
+    var placeErrorMessage = document.getElementById("placeErrorMessage");
+    var placeResultsSection = document.getElementById("placeResultsSection");
+    var placeLoadingProgressText = document.getElementById("placeLoadingProgressText");
+
+    function resetPlaceUI() {
+        if (placeLoadingSection) placeLoadingSection.classList.add("hidden");
+        if (placeErrorSection) placeErrorSection.classList.add("hidden");
+        if (placeResultsSection) placeResultsSection.classList.add("hidden");
+        if (placeUrlInput) placeUrlInput.value = "";
+    }
+
+    function showPlaceLoading() {
+        if (placeLoadingSection) placeLoadingSection.classList.remove("hidden");
+        if (placeErrorSection) placeErrorSection.classList.add("hidden");
+        if (placeResultsSection) placeResultsSection.classList.add("hidden");
+        if (placeLoadingProgressText) placeLoadingProgressText.textContent = "查詢中...";
+    }
+
+    function showPlaceError(message) {
+        if (placeLoadingSection) placeLoadingSection.classList.add("hidden");
+        if (placeErrorSection) placeErrorSection.classList.remove("hidden");
+        if (placeResultsSection) placeResultsSection.classList.add("hidden");
+        if (placeErrorMessage) placeErrorMessage.textContent = message || "發生錯誤，請稍後再試。";
+    }
+
+    function showPlaceResults(data) {
+        if (placeLoadingSection) placeLoadingSection.classList.add("hidden");
+        if (placeErrorSection) placeErrorSection.classList.add("hidden");
+        if (placeResultsSection) placeResultsSection.classList.remove("hidden");
+
+        var placeInfo = data.place_info || {};
+        var reviews = data.reviews || [];
+
+        // Update place info
+        var placeNameEl = document.getElementById("placeName");
+        if (placeNameEl) placeNameEl.textContent = placeInfo.name || "未知店家";
+
+        var placeAddressEl = document.getElementById("placeAddress");
+        if (placeAddressEl) placeAddressEl.textContent = placeInfo.address || "-";
+
+        var placeCoordinatesEl = document.getElementById("placeCoordinates");
+        if (placeCoordinatesEl) {
+            if (placeInfo.lat && placeInfo.lng) {
+                placeCoordinatesEl.textContent = placeInfo.lat.toFixed(6) + ", " + placeInfo.lng.toFixed(6);
+            } else {
+                placeCoordinatesEl.textContent = "-";
+            }
+        }
+
+        var placeRatingEl = document.getElementById("placeRating");
+        if (placeRatingEl) {
+            if (placeInfo.google_rating != null) {
+                placeRatingEl.textContent = placeInfo.google_rating.toFixed(1) + "★";
+            } else {
+                placeRatingEl.textContent = "-";
+            }
+        }
+
+        var placeReviewCountEl = document.getElementById("placeReviewCount");
+        if (placeReviewCountEl) {
+            placeReviewCountEl.textContent = placeInfo.user_ratings_total || reviews.length || 0;
+        }
+
+        var placeMapsLinkEl = document.getElementById("placeMapsLink");
+        if (placeMapsLinkEl && placeInfo.maps_url) {
+            placeMapsLinkEl.href = placeInfo.maps_url;
+        }
+
+        var reviewsTotalCountEl = document.getElementById("reviewsTotalCount");
+        if (reviewsTotalCountEl) reviewsTotalCountEl.textContent = reviews.length;
+
+        // Render reviews
+        var reviewsListEl = document.getElementById("reviewsList");
+        if (reviewsListEl) {
+            reviewsListEl.innerHTML = "";
+            if (reviews.length === 0) {
+                reviewsListEl.innerHTML = '<div class="review-empty">暫無評論資料</div>';
+            } else {
+                reviews.forEach(function(review, index) {
+                    var reviewCard = document.createElement("div");
+                    reviewCard.className = "review-card";
+
+                    var stars = review.stars || review.reviewRating || review.rating || 0;
+                    var text = review.text || review.reviewText || "";
+                    var reviewerName = review.name || review.reviewerName || "匿名";
+                    var publishedAt = review.publishedAtDate || review.publishAt || review.reviewDate || "";
+                    var photos = review.reviewImageUrls || review.photos || review.reviewImages || [];
+                    if (!Array.isArray(photos)) photos = [];
+                    var rawData = review;
+
+                    var starsHtml = "";
+                    for (var i = 0; i < 5; i++) {
+                        starsHtml += '<span class="star ' + (i < stars ? "filled" : "") + '">★</span>';
+                    }
+
+                    var photosHtml = "";
+                    if (photos.length > 0) {
+                        photosHtml = '<div class="review-photos">';
+                        photos.slice(0, 10).forEach(function(photoUrl) {
+                            if (typeof photoUrl === "string" && photoUrl.startsWith("http")) {
+                                photosHtml += '<button class="review-photo" onclick="openLightbox(\'' + photoUrl.replace(/'/g, "\\'") + '\')"><img src="' + photoUrl + '" alt="評論照片" loading="lazy"></button>';
+                            }
+                        });
+                        photosHtml += "</div>";
+                    }
+
+                    reviewCard.innerHTML = 
+                        '<div class="review-header">' +
+                            '<div class="review-stars">' + starsHtml + '</div>' +
+                            '<div class="review-meta">' +
+                                '<span class="review-author">' + escapeHtml(reviewerName) + '</span>' +
+                                '<span class="review-date">' + escapeHtml(publishedAt) + '</span>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div class="review-text">' + escapeHtml(text) + '</div>' +
+                        photosHtml +
+                        '<details class="review-raw">' +
+                            '<summary>查看原始完整資料</summary>' +
+                            '<pre class="review-raw-data">' + escapeHtml(JSON.stringify(rawData, null, 2)) + '</pre>' +
+                        '</details>';
+
+                    reviewsListEl.appendChild(reviewCard);
+                });
+            }
+        }
+    }
+
+    function escapeHtml(text) {
+        if (text == null) return "";
+        var div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+
+    window.resetPlaceUI = resetPlaceUI;
+
+    if (viewPlaceBtn && placeUrlInput) {
+        viewPlaceBtn.addEventListener("click", function() {
+            var url = (placeUrlInput.value || "").trim();
+            if (!url) {
+                showPlaceError("請輸入 Google Maps 網址");
+                return;
+            }
+
+            showPlaceLoading();
+            if (viewPlaceBtn) {
+                viewPlaceBtn.classList.add("loading");
+                viewPlaceBtn.disabled = true;
+            }
+
+            fetch("/api/place_details", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: url }),
+            })
+                .then(function(resp) {
+                    if (!resp.ok) {
+                        return resp.json().then(function(data) {
+                            throw new Error(data.error || "查詢失敗");
+                        });
+                    }
+                    return resp.json();
+                })
+                .then(function(data) {
+                    showPlaceResults(data);
+                })
+                .catch(function(err) {
+                    showPlaceError(err.message || "查詢時發生錯誤");
+                })
+                .finally(function() {
+                    if (viewPlaceBtn) {
+                        viewPlaceBtn.classList.remove("loading");
+                        viewPlaceBtn.disabled = false;
+                    }
+                });
+        });
+
+        placeUrlInput.addEventListener("keypress", function(e) {
+            if (e.key === "Enter") {
+                viewPlaceBtn.click();
+            }
         });
     }
 

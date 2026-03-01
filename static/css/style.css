@@ -2591,3 +2591,226 @@ body.sidebar-collapsed .sidebar {
         font-size: 1.3rem;
     }
 }
+
+/* ---------- View Place Details Page ---------- */
+.place-info-card {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-top: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+}
+
+.place-info-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--divider);
+}
+
+.place-info-row:last-child {
+    border-bottom: none;
+}
+
+.place-info-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 100px;
+    font-size: 0.9rem;
+}
+
+.place-info-value {
+    flex: 1;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    word-break: break-word;
+}
+
+.place-info-link {
+    color: var(--text-link);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color var(--transition);
+}
+
+.place-info-link:hover {
+    color: var(--gm-yellow);
+    text-decoration: underline;
+}
+
+.section-reviews {
+    padding: 40px 0;
+}
+
+.reviews-intro {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.reviews-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.review-card {
+    background: var(--bg-white);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-light);
+    transition: box-shadow var(--transition);
+}
+
+.review-card:hover {
+    box-shadow: var(--shadow);
+}
+
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.review-stars {
+    display: flex;
+    gap: 2px;
+}
+
+.review-stars .star {
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.review-stars .star.filled {
+    color: #fbbf24;
+}
+
+.review-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.review-author {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+}
+
+.review-date {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.review-text {
+    color: var(--text-primary);
+    line-height: 1.7;
+    margin-bottom: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.review-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.review-photo {
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    transition: transform var(--transition);
+}
+
+.review-photo:hover {
+    transform: scale(1.05);
+}
+
+.review-photo img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    display: block;
+}
+
+.review-raw {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--divider);
+}
+
+.review-raw summary {
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    user-select: none;
+    padding: 8px 0;
+    transition: color var(--transition);
+}
+
+.review-raw summary:hover {
+    color: var(--text-link);
+}
+
+.review-raw-data {
+    margin-top: 12px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    overflow-x: auto;
+    font-size: 0.75rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.review-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .place-info-card {
+        padding: 18px;
+    }
+
+    .place-info-row {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .place-info-label {
+        min-width: auto;
+    }
+
+    .review-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .review-meta {
+        align-items: flex-start;
+    }
+
+    .review-photo img {
+        width: 60px;
+        height: 60px;
+    }
+}

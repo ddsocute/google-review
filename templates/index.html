@@ -51,6 +51,7 @@
         <div class="sidebar-logo">食神</div>
         <nav class="sidebar-nav">
             <button class="nav-item active" data-page="home">首頁</button>
+            <button class="nav-item" data-page="view-place">查看店家資料</button>
             <button class="nav-item" data-page="sample">範例報告</button>
             <button class="nav-item" data-page="about">關於</button>
             <button class="nav-item" data-page="legal">資料與免責聲明</button>
@@ -465,6 +466,103 @@
                 </section>
 
             </main>
+        </section>
+
+        <!-- ========= PAGE: VIEW PLACE DETAILS ========= -->
+        <section id="page-view-place" class="page">
+            <div class="container">
+                <header class="hero">
+                    <div class="hero-bg"></div>
+                    <h1 class="hero-title">
+                        <span class="product-name">查看店家資料</span>
+                        <span class="hero-title-sub">輸入 Google Maps 網址查看店家資訊與評論</span>
+                    </h1>
+                    
+                    <div class="input-group">
+                        <input
+                            type="url"
+                            id="placeUrlInput"
+                            class="url-input"
+                            placeholder="貼上 Google Maps 餐廳連結"
+                            autocomplete="off"
+                        >
+                        <button id="viewPlaceBtn" class="btn-analyze" type="button">
+                            <span class="btn-text">查詢</span>
+                            <span class="btn-loader" aria-hidden="true"></span>
+                        </button>
+                    </div>
+                    <p class="input-hint">輸入 Google Maps 餐廳連結，即可查看店家基本資訊與所有評論資料。</p>
+                </header>
+
+                <!-- Loading -->
+                <section id="placeLoadingSection" class="loading-section hidden">
+                    <div class="container">
+                        <div class="loading-card">
+                            <div class="loading-steps">
+                                <div class="loading-progress-bar">
+                                    <div class="loading-progress-fill" id="placeLoadingProgressFill"></div>
+                                </div>
+                                <p class="loading-progress-text" id="placeLoadingProgressText">查詢中...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Error -->
+                <section id="placeErrorSection" class="hidden">
+                    <div class="container">
+                        <div class="error-card">
+                            <span class="error-icon">!</span>
+                            <h2 id="placeErrorTitle">查詢失敗</h2>
+                            <p id="placeErrorMessage">發生錯誤，請稍後再試。</p>
+                            <div class="error-actions">
+                                <button class="btn-retry" onclick="resetPlaceUI()">重新查詢</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Results -->
+                <main id="placeResultsSection" class="hidden">
+                    <!-- Place Info -->
+                    <section class="section-intro">
+                        <div class="container">
+                            <h2 class="restaurant-name" id="placeName">店家名稱</h2>
+                            <div class="place-info-card">
+                                <div class="place-info-row">
+                                    <span class="place-info-label">地址：</span>
+                                    <span class="place-info-value" id="placeAddress">-</span>
+                                </div>
+                                <div class="place-info-row">
+                                    <span class="place-info-label">經緯度：</span>
+                                    <span class="place-info-value" id="placeCoordinates">-</span>
+                                </div>
+                                <div class="place-info-row">
+                                    <span class="place-info-label">Google 評分：</span>
+                                    <span class="place-info-value" id="placeRating">-</span>
+                                </div>
+                                <div class="place-info-row">
+                                    <span class="place-info-label">總評論數：</span>
+                                    <span class="place-info-value" id="placeReviewCount">-</span>
+                                </div>
+                                <div class="place-info-row">
+                                    <span class="place-info-label">Google Maps：</span>
+                                    <a href="#" id="placeMapsLink" target="_blank" class="place-info-link">開啟連結</a>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Reviews -->
+                    <section class="section-reviews">
+                        <div class="container">
+                            <h2 class="section-title">評論資料</h2>
+                            <p class="reviews-intro">共 <span id="reviewsTotalCount">0</span> 則評論</p>
+                            <div id="reviewsList" class="reviews-list"></div>
+                        </div>
+                    </section>
+                </main>
+            </div>
         </section>
 
         <!-- ========= PAGE: SAMPLE REPORT ========= -->

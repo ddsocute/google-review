@@ -16,7 +16,7 @@ load_dotenv(os.path.join(_BASE_DIR, ".env"), override=True)
 
 from services.cache_store import init_db, get_cached_analysis, set_cached_analysis
 from services.place_store import init_place_db, record_place_from_analysis, list_places, list_catalog_with_analysis
-from services.review_store import init_review_db
+from services.review_store import init_review_db, list_recent_reviews
 from services.job_store import init_job_db, get_job as get_job_row, list_jobs as list_job_rows
 from services.url_normalizer import canonicalize
 from services.apify_client import (
@@ -1052,6 +1052,177 @@ def api_jobs_get(job_id: str):
     if not row:
         return jsonify({"error": "job not found"}), 404
     return jsonify(row)
+
+
+@app.route("/api/place_details", methods=["POST"])
+def api_place_details():
+    """
+    根據 Google Maps URL 查詢店家詳細資訊和評論資料。
+    
+    返回：
+    - place_info: 店家基本資訊（名稱、地址、經緯度、評分、評論數等）
+    - reviews: 評論列表（內容、星級、評論者名稱、發布時間、照片資訊、原始完整資料）
+    """
+    body = request.get_json(force=True) or {}
+    url = (body.get("url") or "").strip()
+    
+    if not url:
+        return jsonify({"error": "請提供 Google Maps 網址"}), 400
+    
+    # Validate URL format
+    if not validate_google_maps_url(url):
+        return jsonify({"error": "網址格式不正確，請貼上 Google Maps 餐廳連結"}), 400
+    
+    # Resolve short link if needed
+    if re.search(r"(goo\.gl/|maps\.app\.goo\.gl/)", url):
+        try:
+            url = resolve_short_url(url)
+        except Exception:
+            return jsonify({"error": "短網址解析失敗，請改用完整的 Google Maps 連結"}), 400
+        if not validate_google_maps_url(url):
+            return jsonify({"error": "短網址解析後非有效的 Google Maps 連結"}), 400
+    
+    # Normalize URL to canonical form
+    try:
+        norm = canonicalize(url)
+    except Exception:
+        return jsonify({"error": "網址正規化失敗"}), 400
+    
+    canonical_url = norm.get("canonical_url") or url
+    
+    # Query place_catalog for basic info
+    # Try to find in place_catalog first (most complete info)
+    place_info = None
+    
+    try:
+        # Use place_store functions which handle both SQLite and PostgreSQL
+        from services.place_store import list_catalog_places
+        from services.place_store import _use_postgres_places, _pg_connect
+        from services.cache_store import _get_connection
+        
+        # Try to find in place_catalog (check all tags)
+        catalog_items = []
+        # Get a sample from any tag to find the place
+        try:
+            # Try common tags
+            for tag in ["xinyi", "default"]:
+                items = list_catalog_places(tag=tag, limit=10000)
+                for item in items:
+                    if item.get("canonical_url") == canonical_url:
+                        catalog_items.append(item)
+                        break
+                if catalog_items:
+                    break
+        except Exception:
+            pass
+        
+        if catalog_items:
+            item = catalog_items[0]
+            place_info = {
+                "name": item.get("name"),
+                "address": item.get("address"),
+                "lat": item.get("lat"),
+                "lng": item.get("lng"),
+                "google_rating": item.get("google_rating"),
+                "user_ratings_total": item.get("user_ratings_total"),
+                "maps_url": item.get("maps_url") or canonical_url,
+                "place_id": item.get("place_id"),
+            }
+        
+        # If not found in catalog, try places table
+        if not place_info:
+            try:
+                if _use_postgres_places():
+                    conn = _pg_connect()
+                    try:
+                        with conn.cursor() as cur:
+                            cur.execute(
+                                """
+                                SELECT
+                                    display_name AS name,
+                                    address,
+                                    google_rating,
+                                    user_ratings_total
+                                FROM places
+                                WHERE canonical_url = %s
+                                LIMIT 1
+                                """,
+                                (canonical_url,),
+                            )
+                            row = cur.fetchone()
+                            if row:
+                                place_info = {
+                                    "name": row["name"],
+                                    "address": row["address"],
+                                    "lat": None,
+                                    "lng": None,
+                                    "google_rating": row["google_rating"],
+                                    "user_ratings_total": row["user_ratings_total"],
+                                    "maps_url": canonical_url,
+                                    "place_id": None,
+                                }
+                    finally:
+                        conn.close()
+                else:
+                    conn = _get_connection()
+                    try:
+                        cur = conn.cursor()
+                        cur.execute(
+                            """
+                            SELECT
+                                display_name AS name,
+                                address,
+                                google_rating,
+                                user_ratings_total
+                            FROM places
+                            WHERE canonical_url = ?
+                            LIMIT 1
+                            """,
+                            (canonical_url,),
+                        )
+                        row = cur.fetchone()
+                        if row:
+                            place_info = {
+                                "name": row["name"],
+                                "address": row["address"],
+                                "lat": None,
+                                "lng": None,
+                                "google_rating": row["google_rating"],
+                                "user_ratings_total": row["user_ratings_total"],
+                                "maps_url": canonical_url,
+                                "place_id": None,
+                            }
+                    finally:
+                        conn.close()
+            except Exception:
+                pass
+        
+        # If still not found, use normalized display_name as fallback
+        if not place_info:
+            place_info = {
+                "name": norm.get("display_name") or "未知店家",
+                "address": None,
+                "lat": None,
+                "lng": None,
+                "google_rating": None,
+                "user_ratings_total": None,
+                "maps_url": canonical_url,
+                "place_id": norm.get("place_id"),
+            }
+        
+        # Query reviews
+        reviews = list_recent_reviews(canonical_url=canonical_url, limit=500)
+        
+    except Exception as e:
+        import traceback
+        return jsonify({"error": f"查詢資料時發生錯誤：{str(e)[:100]}"}), 500
+    
+    return jsonify({
+        "canonical_url": canonical_url,
+        "place_info": place_info,
+        "reviews": reviews,
+        "reviews_count": len(reviews),
+    })
 
 
 @app.route("/api/map_search", methods=["POST"])
